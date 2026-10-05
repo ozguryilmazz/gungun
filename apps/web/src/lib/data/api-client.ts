@@ -42,13 +42,37 @@ export async function apiGet<T>(path: string, schema: z.ZodType<T>): Promise<T |
   const url = new URL(path, apiBaseUrl());
   if (url.origin !== apiBaseUrl().origin) throw new Error("API dışına istek engellendi");
 
+  const first = await fetchJson(url, "cached");
+  if (first === null) return null;
+  let parsed = schema.safeParse(first);
+  if (!parsed.success) {
+    // Önbellekteki yanıt eski sürümden kalmış olabilir (ör. güncelleme sonrası yeni alanlar yok):
+    // önbelleği atlayıp bir kez daha doğrudan API'den istenir
+    const fresh = await fetchJson(url, "no-store");
+    if (fresh === null) return null;
+    parsed = schema.safeParse(fresh);
+  }
+  if (!parsed.success) {
+    console.error(
+      `[api] ${url.pathname} yanıtı sözleşmeye uymuyor`,
+      parsed.error.issues.slice(0, 5),
+    );
+    throw new DataUnavailableError("API yanıtı sözleşmeye uymuyor");
+  }
+  return parsed.data;
+}
+
+/** Tek istek: 404 → null; ağ hatası, 5xx ve JSON olmayan yanıt → DataUnavailableError */
+async function fetchJson(url: URL, mode: "cached" | "no-store"): Promise<unknown> {
   let response: Response;
   try {
     response = await fetch(url, {
       headers: { accept: "application/json" },
       signal: AbortSignal.timeout(TIMEOUT_MS),
       redirect: "error",
-      next: { revalidate: REVALIDATE_SECONDS },
+      ...(mode === "cached"
+        ? { next: { revalidate: REVALIDATE_SECONDS } }
+        : { cache: "no-store" as const }),
     });
   } catch (error) {
     console.error(`[api] ${url.pathname} isteği başarısız`, error);
@@ -60,21 +84,9 @@ export async function apiGet<T>(path: string, schema: z.ZodType<T>): Promise<T |
     console.error(`[api] ${url.pathname} → HTTP ${response.status}`);
     throw new DataUnavailableError(`API HTTP ${response.status}`);
   }
-
-  let body: unknown;
   try {
-    body = await response.json();
+    return await response.json();
   } catch (error) {
     throw new DataUnavailableError("API yanıtı JSON değil", { cause: error });
   }
-
-  const parsed = schema.safeParse(body);
-  if (!parsed.success) {
-    console.error(
-      `[api] ${url.pathname} yanıtı sözleşmeye uymuyor`,
-      parsed.error.issues.slice(0, 5),
-    );
-    throw new DataUnavailableError("API yanıtı sözleşmeye uymuyor");
-  }
-  return parsed.data;
 }
