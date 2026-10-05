@@ -15,12 +15,18 @@ export type Fetcher = (url: string, policy: FetchPolicy) => Promise<SafeResponse
 
 export type Logger = Pick<FastifyBaseLogger, "info" | "warn" | "error">;
 
+/** Sunucu tarafı gizli anahtarlar (.env). ASLA loglanmaz, veritabanına ve tarayıcıya gitmez. */
+export interface ProviderSecrets {
+  youtubeApiKey?: string | undefined;
+}
+
 export interface ProviderContext {
   db: Database;
   provider: ProviderRecord;
   now: Date;
   fetcher: Fetcher;
   log: Logger;
+  secrets: ProviderSecrets;
 }
 
 export interface ProviderOutcome {

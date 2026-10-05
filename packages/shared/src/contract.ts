@@ -174,6 +174,31 @@ export const ArchiveIndexResponseSchema = z.object({
   days: z.array(z.object({ date: ArchiveDateSchema, topicCount: z.number().int().min(0) })),
 });
 
+/** YouTube Türkiye trend videosu (resmi YouTube Data API; başlık/kanal değiştirilmeden) */
+export const YoutubeVideoSchema = z.object({
+  rank: z.number().int().positive(),
+  videoId: z.string().regex(/^[A-Za-z0-9_-]{6,32}$/),
+  title: z.string().min(1).max(300),
+  channelTitle: z.string().min(1).max(200),
+  /** Her zaman https://www.youtube.com/watch?v=… — video sitede oynatılmaz */
+  url: SafeUrlSchema,
+  thumbnailUrl: z
+    .url({ protocol: /^https$/, hostname: /^i\.ytimg\.com$/ })
+    .max(512)
+    .nullable(),
+  viewCount: z.number().int().min(0).nullable(),
+  publishedAt: isoDate.nullable(),
+});
+
+export const YoutubeListResponseSchema = z.object({
+  items: z.array(YoutubeVideoSchema),
+  /** Listenin YouTube'dan alındığı an; hiç veri yoksa null */
+  observedAt: isoDate.nullable(),
+  meta: ResponseMetaSchema,
+});
+
+export type YoutubeVideo = z.infer<typeof YoutubeVideoSchema>;
+export type YoutubeListResponse = z.infer<typeof YoutubeListResponseSchema>;
 export type ArchiveItem = z.infer<typeof ArchiveItemSchema>;
 export type ArchiveDayResponse = z.infer<typeof ArchiveDayResponseSchema>;
 export type ArchiveIndexResponse = z.infer<typeof ArchiveIndexResponseSchema>;

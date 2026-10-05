@@ -31,8 +31,8 @@ export function SourceStatus({ status }: { status: StatusResponse | null }) {
             </li>
           ))}
           <li className={styles.statusRow}>
-            <span>Sosyal medya</span>
-            <span className={styles.statusValue}>Veri bekleniyor</span>
+            <span>X (Twitter)</span>
+            <span className={styles.statusValue}>Henüz bağlanmadı</span>
           </li>
         </ul>
       )}

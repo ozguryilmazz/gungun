@@ -1,5 +1,5 @@
 // Bir veri sağlayıcısını HEMEN, bir kez çalıştırır (kapalı olsa bile) ve kaynak bazında sonucu yazdırır.
-// Kullanım: pnpm fetch:once rss_news | google_trends | all
+// Kullanım: pnpm fetch:once rss_news | google_trends | youtube_trending | all
 import { createDb } from "@gundemci/db";
 import pino from "pino";
 import { loadConfig } from "../config.ts";
@@ -23,7 +23,11 @@ let failed = false;
 try {
   for (const key of keys) {
     console.log(`\n▶ ${key}`);
-    const result = await runProvider({ db, client, log }, key, { force: true });
+    const result = await runProvider(
+      { db, client, log, secrets: { youtubeApiKey: config.YOUTUBE_API_KEY } },
+      key,
+      { force: true },
+    );
     if (result.skipped) {
       console.log(
         `  atlandı: ${result.skipped === "locked" ? "başka bir süreç şu an çalıştırıyor" : result.skipped}`,

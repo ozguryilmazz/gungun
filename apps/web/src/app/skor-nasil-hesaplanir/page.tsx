@@ -17,7 +17,7 @@ const DESCRIPTIONS: Record<(typeof COMPONENT_KEYS)[number], string> = {
   search_interest:
     "Ana sinyal: aramanın Türkiye’de Google trend listesinde olması ve yaklaşık arama hacmi. Listeden çıkan aramanın arama ilgisi sıfırlanır.",
   social:
-    "Sosyal platformlardaki ilgi. İlk kaynak olarak YouTube Türkiye trendleri ekleniyor; X ileride. Bağlanana kadar “Veri bekleniyor”.",
+    "Sosyal platformlardaki ilgi. Şu an kaynak YouTube Türkiye trendleri: aranan terim trend videoların başlığında geçiyorsa videonun sırasına göre puan verilir. X ileride. YouTube verisi son 2 saatte güncellenmediyse “Veri bekleniyor” gösterilir.",
   news_visibility:
     "Konuyla ilgili haber yayımlayan farklı kaynak sayısı. Aynı sitenin çok sayıda haberi skoru şişirmez.",
   velocity: "Aramanın trend listesine yeni girmesi ya da arama hacminin son saatlerde artması.",

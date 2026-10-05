@@ -23,6 +23,13 @@ export interface FetchPolicy {
   maxBytes?: number;
   maxRedirects?: number;
   userAgent: string;
+  /** Accept başlığı (varsayılan: RSS/XML) */
+  accept?: string;
+  /**
+   * Ek istek başlıkları (ör. API anahtarı). Anahtarı adrese koymamak için kullanılır: böylece hiçbir
+   * log/hata mesajında görünmez. Yalnızca İLK host'a gönderilir; başka host'a yönlendirmede düşürülür.
+   */
+  headers?: Readonly<Record<string, string>>;
   /** YALNIZCA testler için: yerel test sunucusuna (özel adres + rastgele port) izin verir */
   allowPrivateAddresses?: boolean;
 }
@@ -116,6 +123,7 @@ function requestOnce(
   url: URL,
   policy: FetchPolicy,
   deadline: number,
+  extraHeaders: Readonly<Record<string, string>>,
 ): Promise<SafeResponse | { redirect: string }> {
   return new Promise((resolve, reject) => {
     const remaining = deadline - Date.now();
@@ -129,8 +137,10 @@ function requestOnce(
         method: "GET",
         lookup: guardedLookup(policy.allowPrivateAddresses === true),
         headers: {
+          ...extraHeaders,
           "user-agent": policy.userAgent,
           accept:
+            policy.accept ??
             "application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.9, */*;q=0.1",
           "accept-encoding": "gzip, deflate, br",
         },
@@ -192,8 +202,10 @@ export async function safeFetch(rawUrl: string, policy: FetchPolicy): Promise<Sa
   const deadline = Date.now() + (policy.timeoutMs ?? DEFAULTS.timeoutMs);
   const maxRedirects = policy.maxRedirects ?? DEFAULTS.maxRedirects;
   let url = checkUrl(rawUrl, policy);
+  const firstHost = url.host;
   for (let i = 0; i <= maxRedirects; i++) {
-    const result = await requestOnce(url, policy, deadline);
+    const extra = url.host === firstHost ? (policy.headers ?? {}) : {};
+    const result = await requestOnce(url, policy, deadline, extra);
     if (!("redirect" in result)) return result;
     // Her yönlendirme hedefi baştan doğrulanır (protokol, host, port)
     url = checkUrl(result.redirect, policy);

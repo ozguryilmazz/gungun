@@ -57,7 +57,8 @@ pnpm dev
 
 ## Veri toplama
 
-- **Sağlayıcılar:** `rss_news` (12 haber sitesinin RSS'i) ve `google_trends` (Türkiye trend RSS'i).
+- **Sağlayıcılar:** `rss_news` (12 haber sitesinin RSS'i), `google_trends` (Türkiye trend RSS'i) ve
+  `youtube_trending` (resmi YouTube Data API v3, Türkiye trend videoları; `.env`'de `YOUTUBE_API_KEY` gerekir).
   Hepsi **kapalı** başlar.
 - **Ne alınır:** Yalnızca başlık, bağlantı ve yayın zamanı. Haber metni alınmaz.
 - **Güvenlik:** Dış istekler yalnızca kayıtlı adreslere gider. İç ağ adresleri, aşırı büyük yanıtlar ve
@@ -71,6 +72,7 @@ pnpm dev
 pnpm fetch:once all   # her kaynağın sonucunu tek tek gösterir
 pnpm providers enable rss_news
 pnpm providers enable google_trends
+pnpm providers enable youtube_trending
 pnpm worker           # açık sağlayıcıları 10–15 dakikada bir çalıştırır (Ctrl+C ile durur)
 ```
 
@@ -91,16 +93,17 @@ Yapay zekâ kullanılmaz; her adım kurala dayalıdır ve açıklanabilir.
 
 ## API (v1)
 
-| Uç nokta                              | Açıklama                                  |
-| ------------------------------------- | ----------------------------------------- |
-| `GET /api/v1/topics?category=&limit=` | Güncel gündem (skora göre sıralı)         |
-| `GET /api/v1/topics/rising`           | Şu anda yükselenler (en az 3 kaynaklı)    |
-| `GET /api/v1/topics/falling`          | Gündemden düşenler                        |
-| `GET /api/v1/topics/:slug`            | Konu detayı: skor bileşenleri, kaynaklar… |
-| `GET /api/v1/topics/:slug/history`    | Son 24 saatin skor geçmişi                |
-| `GET /api/v1/categories`              | Kategoriler                               |
-| `GET /api/v1/meta/status`             | Veri kaynaklarının durumu                 |
-| `GET /health`, `GET /health/ready`    | Sağlık kontrolleri                        |
+| Uç nokta                              | Açıklama                                      |
+| ------------------------------------- | --------------------------------------------- |
+| `GET /api/v1/topics?category=&limit=` | Güncel gündem (skora göre sıralı)             |
+| `GET /api/v1/topics/rising`           | Şu anda yükselenler (en az 3 kaynaklı)        |
+| `GET /api/v1/topics/falling`          | Gündemden düşenler                            |
+| `GET /api/v1/topics/:slug`            | Konu detayı: skor bileşenleri, kaynaklar…     |
+| `GET /api/v1/topics/:slug/history`    | Son 24 saatin skor geçmişi                    |
+| `GET /api/v1/categories`              | Kategoriler                                   |
+| `GET /api/v1/meta/status`             | Veri kaynaklarının durumu                     |
+| `GET /api/v1/youtube?limit=10`        | YouTube Türkiye trend videoları (en fazla 50) |
+| `GET /health`, `GET /health/ready`    | Sağlık kontrolleri                            |
 
 Yanıt biçimleri `packages/shared/src/contract.ts` içindeki şemalarla tanımlıdır. Hatalar her zaman
 `{ "error": { "code", "message" } }` biçimindedir; teknik ayrıntı yalnızca sunucu logundadır.

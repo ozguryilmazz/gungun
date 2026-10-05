@@ -1,0 +1,41 @@
+{
+  "kind": "youtube#videoListResponse",
+  "items": [
+    {
+      "id": "abcDEF12345",
+      "snippet": {
+        "title": "Derbi özeti: Fenerbahçe 2-1 Galatasaray",
+        "channelTitle": "Spor Kanalı",
+        "publishedAt": "2026-10-05T06:00:00Z",
+        "categoryId": "17",
+        "thumbnails": { "medium": { "url": "https://i.ytimg.com/vi/abcDEF12345/mqdefault.jpg" } }
+      },
+      "statistics": { "viewCount": "1250000" }
+    },
+    {
+      "id": "zzzYYY98765",
+      "snippet": {
+        "title": "Yeni şarkı klibi",
+        "channelTitle": "Müzik Kanalı",
+        "publishedAt": "2026-10-04T18:00:00Z",
+        "thumbnails": { "medium": { "url": "https://evil.example/x.jpg" } }
+      },
+      "statistics": { "viewCount": "not-a-number" }
+    },
+    { "id": "bozuk-oge" },
+    {
+      "id": "abcDEF12345",
+      "snippet": { "title": "Tekrar eden video", "channelTitle": "Kanal" }
+    },
+    {
+      "id": "derbi000002",
+      "snippet": {
+        "title": "Derbide tartışmalı pozisyon",
+        "channelTitle": "Yorum Kanalı",
+        "publishedAt": "2026-10-05T07:00:00Z",
+        "thumbnails": { "default": { "url": "https://i.ytimg.com/vi/derbi000002/default.jpg" } }
+      },
+      "statistics": { "viewCount": "300000" }
+    }
+  ]
+}

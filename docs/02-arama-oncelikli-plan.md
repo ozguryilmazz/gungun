@@ -120,3 +120,13 @@ Sonraki aşamaların numaraları birer kayar: güvenlik sertleştirme 11, SEO 12
   - Ana kelimeler, küme büyüyünce en az 2 başlıkta geçenlerdir.
   - Birleşme eşiği: 3+ ortak kelimede 0,5; yalnızca 2 ortak kelimede 0,6.
   - Başlık kapsamı en az %25.
+
+### 9.2 (tamamlandı)
+
+- **Sağlayıcı `youtube_trending`:** Resmi YouTube Data API v3 (`chart=mostPopular`, `regionCode=TR`), 20 dk’da bir, kapalı başlar.
+  - API anahtarı `.env` → `YOUTUBE_API_KEY`; adrese değil `X-Goog-Api-Key` başlığına konur. Böylece hiçbir log ya da hata kaydında görünmez. Başlık yalnızca `www.googleapis.com`’a gider; başka host’a yönlendirmede düşürülür.
+  - Yanıt zod ile doğrulanır. Küçük resim yalnızca `i.ytimg.com`’dan kabul edilir. 30 günden eski kayıtlar silinir (YouTube API şartları).
+- **Veritabanı:** `youtube_videos` tablosu (migration `0003_youtube`).
+- **API:** `GET /api/v1/youtube?limit=` — en güncel liste. 24 saatten eski liste gösterilmez.
+- **Arayüz:** Ana sayfada “YouTube’da Türkiye trendleri” (ilk 10) ve `/youtube` (ilk 50). Video sitede oynatılmaz; bağlantı YouTube’a gider. Kaynak olarak YouTube belirtilir.
+- **Sosyal sinyal (skorun %25’i):** Trend terimi YouTube trend videolarının başlığında geçiyorsa en iyi sıraya göre değer alır (1. sıra = 1,0; 50. sıra ≈ 0,3; her ek video +0,1, en fazla +0,2). Geçmiyorsa 0. YouTube listesi 2 saatten eskiyse “Veri bekleniyor”. Haber konularında sosyal sinyal ölçülmez.

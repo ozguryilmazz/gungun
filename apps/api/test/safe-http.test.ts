@@ -91,6 +91,18 @@ describe("safeFetch — yerel test sunucusu ile davranış", () => {
       if (url === "/loop") return res.writeHead(302, { location: "/loop" }).end();
       if (url === "/slow") return setTimeout(() => res.end("geç"), 2000);
       if (url === "/500") return res.writeHead(500).end("boom");
+      if (url === "/echo")
+        return res.writeHead(200).end(
+          JSON.stringify({
+            key: req.headers["x-goog-api-key"] ?? null,
+            accept: req.headers.accept,
+          }),
+        );
+      if (url === "/redirect-echo") return res.writeHead(302, { location: "/echo" }).end();
+      if (url === "/redirect-other-host") {
+        const port = (server.address() as AddressInfo).port;
+        return res.writeHead(302, { location: `http://localhost:${port}/echo` }).end();
+      }
       return res.writeHead(404).end();
     });
     await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
@@ -122,6 +134,22 @@ describe("safeFetch — yerel test sunucusu ile davranış", () => {
     await expect(safeFetch(`${base}/loop`, local())).rejects.toMatchObject({
       code: "too_many_redirects",
     });
+  });
+
+  it("ek başlıklar (API anahtarı) yalnızca ilk host'a gider; başka host'a yönlendirmede düşer", async () => {
+    const p = local({
+      isHostAllowed: (h) => h === "127.0.0.1" || h === "localhost",
+      headers: { "x-goog-api-key": "gizli" },
+      accept: "application/json",
+    });
+    const echo = async (path: string) =>
+      JSON.parse((await safeFetch(`${base}${path}`, p)).body.toString()) as {
+        key: string | null;
+        accept: string;
+      };
+    expect(await echo("/echo")).toEqual({ key: "gizli", accept: "application/json" });
+    expect((await echo("/redirect-echo")).key).toBe("gizli");
+    expect((await echo("/redirect-other-host")).key).toBeNull();
   });
 
   it("boyut sınırı: bildirilen, akan ve sıkıştırma bombası", async () => {

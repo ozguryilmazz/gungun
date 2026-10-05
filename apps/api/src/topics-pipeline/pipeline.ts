@@ -57,7 +57,33 @@ export const RULES = {
   trendMatchRatio: 0.3,
   /** "3 saat önceki" trafik ölçümü için en az geçmiş */
   trendCompareMinHours: 2.5,
+  /** YouTube trend listesi bu kadar eskiyse sosyal sinyal "bekleniyor" sayılır */
+  youtubeFreshHours: 2,
 } as const;
+
+/** Sosyal sinyal için YouTube trend listesindeki bir video (yalnızca başlık ve sıra kullanılır) */
+export interface YoutubeSignalVideo {
+  title: string;
+  rank: number;
+}
+
+/**
+ * Sosyal sinyal (YouTube): trend terimi YouTube Türkiye trend listesindeki video başlıklarında
+ * geçiyor mu? Değer en iyi sıraya göre (1. sıra = 1,0; 50. sıra ≈ 0,3), her ek video +0,1 (en fazla +0,2).
+ * Terim hiçbir videoda geçmiyorsa 0 (ölçüldü, sinyal yok). Medya adları eşleşmez.
+ */
+export function youtubeSocial(
+  term: string,
+  videos: YoutubeSignalVideo[],
+): { value: number; matches: number; bestRank: number | null } {
+  if (isMediaTerm(term)) return { value: 0, matches: 0, bestRank: null };
+  const hits = videos.filter((v) => titleMentionsTerm(v.title, term));
+  if (hits.length === 0) return { value: 0, matches: 0, bestRank: null };
+  const bestRank = Math.min(...hits.map((v) => v.rank));
+  const base = 1 - ((Math.min(bestRank, 50) - 1) / 49) * 0.7;
+  const bonus = Math.min((hits.length - 1) * 0.1, 0.2);
+  return { value: round4(Math.min(base + bonus, 1)), matches: hits.length, bestRank };
+}
 
 export interface PipelineResult {
   skipped?: "locked";
@@ -205,8 +231,14 @@ export function scoreTrend(
   trend: TrendInfo,
   newsItems: ClusterInput[],
   now: Date,
-  ctx: { publisherTotal: number; trendsAvailable: boolean },
+  ctx: {
+    publisherTotal: number;
+    trendsAvailable: boolean;
+    /** null: YouTube verisi yok/eski → sosyal sinyal "bekleniyor" */
+    youtube?: YoutubeSignalVideo[] | null;
+  },
 ): { normalized: ComponentInput; raw: Record<string, number | null> } {
+  const social = ctx.youtube && trend.current ? youtubeSocial(trend.term, ctx.youtube) : null;
   const recentNews = newsItems.filter((i) => i.at >= hoursAgo(now, 6));
   const newsSources =
     distinctPublishers(recentNews) +
@@ -234,13 +266,14 @@ export function scoreTrend(
   return {
     normalized: {
       search_interest: searchInterest === null ? null : round4(searchInterest),
-      social: null,
+      // Listeden çıkmış aramada sosyal sinyal 0 (ölçüm var, güncel değil); veri yoksa null
+      social: social ? social.value : ctx.youtube ? 0 : null,
       news_visibility: round4(newsVisibility),
       velocity: round4(velocity),
     },
     raw: {
       search_interest: trend.approxTraffic,
-      social: null,
+      social: social ? social.matches : null,
       news_visibility: newsSources,
       velocity: trend.previousTraffic,
     },
@@ -277,7 +310,12 @@ export function scoreCluster(
 }
 
 /** Trend konusu için ölçülen bilgiler (uydurma yok) */
-export function trendReasons(trend: TrendInfo, newsItems: ClusterInput[], now: Date): string[] {
+export function trendReasons(
+  trend: TrendInfo,
+  newsItems: ClusterInput[],
+  now: Date,
+  youtube: YoutubeSignalVideo[] | null = null,
+): string[] {
   const reasons: string[] = [];
   if (trend.current) {
     const traffic = trend.approxTraffic
@@ -293,6 +331,13 @@ export function trendReasons(trend: TrendInfo, newsItems: ClusterInput[], now: D
   }
   const sources = distinctPublishers(newsItems) + new Set(trend.related.map((r) => r.source)).size;
   if (sources > 0) reasons.push(`${sources} haber kaynağında konuyla ilgili haber var`);
+  if (youtube && trend.current) {
+    const yt = youtubeSocial(trend.term, youtube);
+    if (yt.matches > 0)
+      reasons.push(
+        `YouTube Türkiye trendlerinde ${yt.matches} videonun başlığında geçiyor (en üst: ${yt.bestRank}. sıra)`,
+      );
+  }
   return reasons;
 }
 
@@ -502,6 +547,30 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
             and observed_at <= ${now.toISOString()}
         `)
       : [];
+    // ── Girdi 3: YouTube Türkiye trend listesi (sosyal sinyal; yalnızca güncelse) ──
+    const [youtubeProvider] = await db
+      .select({ id: dataProviders.id, lastSuccessAt: dataProviders.lastSuccessAt })
+      .from(dataProviders)
+      .where(eq(dataProviders.key, "youtube_trending"));
+    let youtube: YoutubeSignalVideo[] | null = null;
+    if (
+      youtubeProvider?.lastSuccessAt &&
+      youtubeProvider.lastSuccessAt >= hoursAgo(now, RULES.youtubeFreshHours)
+    ) {
+      const ytRows = await db.execute<{ title: string; rank: number }>(sql`
+        select title, rank from youtube_videos
+        where provider_id = ${youtubeProvider.id}
+          and observed_at = (
+            select max(observed_at) from youtube_videos
+            where provider_id = ${youtubeProvider.id}
+              and observed_at >= ${hoursAgo(now, RULES.youtubeFreshHours).toISOString()}
+              and observed_at <= ${now.toISOString()}
+          )
+      `);
+      if (ytRows.length > 0)
+        youtube = ytRows.map((r) => ({ title: r.title, rank: Number(r.rank) }));
+    }
+
     const trends = compileTrends(
       trendRows.map((r) => ({
         ...r,
@@ -675,7 +744,7 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
             ...titleUpdate,
             ...categoryUpdate,
             ...((existing?.summaryOrigin ?? "none") === "none"
-              ? { reasons: trendReasons(trend, newsItems, now) }
+              ? { reasons: trendReasons(trend, newsItems, now, youtube) }
               : {}),
             status,
             ...(status === "published" && !existing?.publishedAt ? { publishedAt: now } : {}),
@@ -704,7 +773,7 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
           tx,
           topicId,
           now,
-          scoreTrend(trend, newsItems, now, { publisherTotal, trendsAvailable }),
+          scoreTrend(trend, newsItems, now, { publisherTotal, trendsAvailable, youtube }),
         );
         if (snap) {
           result.snapshots++;

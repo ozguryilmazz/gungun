@@ -34,6 +34,17 @@ export const DATA_PROVIDERS: readonly ProviderSeed[] = [
       userAgent: BOT_USER_AGENT,
     },
   },
+  {
+    // Resmi YouTube Data API v3; anahtar .env'deki YOUTUBE_API_KEY (yalnızca sunucuda)
+    key: "youtube_trending",
+    kind: "social",
+    name: "YouTube Türkiye trendleri",
+    config: {
+      regionCode: "TR",
+      maxResults: 50,
+      minIntervalMinutes: 20,
+    },
+  },
 ];
 
 export interface PublisherSeed {

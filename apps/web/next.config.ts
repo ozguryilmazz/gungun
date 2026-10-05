@@ -21,7 +21,7 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data:",
+  "img-src 'self' data: https://i.ytimg.com",
   "font-src 'self'",
   `connect-src 'self'${isDev ? " ws:" : ""}`,
   "object-src 'none'",

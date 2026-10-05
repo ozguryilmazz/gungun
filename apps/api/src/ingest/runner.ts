@@ -7,11 +7,20 @@ import type postgres from "postgres";
 import { safeFetch } from "../lib/safe-http.ts";
 import { googleTrendsProvider } from "./providers/google-trends.ts";
 import { rssNewsProvider } from "./providers/rss-news.ts";
-import type { Fetcher, IngestProvider, Logger, ProviderOutcome, ProviderRecord } from "./types.ts";
+import { youtubeTrendingProvider } from "./providers/youtube-trending.ts";
+import type {
+  Fetcher,
+  IngestProvider,
+  Logger,
+  ProviderOutcome,
+  ProviderRecord,
+  ProviderSecrets,
+} from "./types.ts";
 
 export const PROVIDERS: Record<string, IngestProvider> = {
   [rssNewsProvider.key]: rssNewsProvider,
   [googleTrendsProvider.key]: googleTrendsProvider,
+  [youtubeTrendingProvider.key]: youtubeTrendingProvider,
 };
 
 export interface RunResult extends ProviderOutcome {
@@ -25,6 +34,7 @@ export interface RunnerDeps {
   log: Logger;
   fetcher?: Fetcher;
   now?: () => Date;
+  secrets?: ProviderSecrets;
 }
 
 export async function loadProvider(db: Database, key: string): Promise<ProviderRecord | null> {
@@ -74,6 +84,7 @@ export async function runProvider(
         now,
         fetcher: deps.fetcher ?? safeFetch,
         log: deps.log,
+        secrets: deps.secrets ?? {},
       });
     } catch (error) {
       deps.log.error({ err: error, provider: key }, "sağlayıcı beklenmeyen hata verdi");

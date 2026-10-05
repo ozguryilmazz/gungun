@@ -8,12 +8,14 @@ import {
   StatusResponseSchema,
   TopicDetailResponseSchema,
   TopicListResponseSchema,
+  YoutubeListResponseSchema,
   isValidSlug,
   type ArchiveDayResponse,
   type ArchiveIndexResponse,
   type StatusResponse,
   type TopicDetailResponse,
   type TopicListResponse,
+  type YoutubeListResponse,
 } from "@gundemci/shared";
 import { DataUnavailableError, apiGet } from "./api-client";
 
@@ -71,4 +73,9 @@ export async function getArchiveIndex(): Promise<ArchiveIndexResponse> {
 export async function getArchiveDay(date: string): Promise<ArchiveDayResponse | null> {
   if (!ArchiveDateSchema.safeParse(date).success) return null;
   return apiGet(`/api/v1/archive/${encodeURIComponent(date)}`, ArchiveDayResponseSchema);
+}
+
+/** YouTube Türkiye trend videoları (en güncel liste; 24 saatten eskiyse boş) */
+export async function getYoutube(limit = 10): Promise<YoutubeListResponse> {
+  return required(apiGet(`/api/v1/youtube?limit=${clampLimit(limit)}`, YoutubeListResponseSchema));
 }

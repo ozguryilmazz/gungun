@@ -8,6 +8,7 @@ import { healthRoutes, metaRoutes } from "./modules/meta/routes.ts";
 import type { TopicRepository } from "./modules/topics/repository.ts";
 import { topicRoutes } from "./modules/topics/routes.ts";
 import { TopicService } from "./modules/topics/service.ts";
+import { youtubeRoutes } from "./modules/youtube/routes.ts";
 
 export interface AppOptions {
   repo: TopicRepository;
@@ -92,6 +93,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
       await v1.register(topicRoutes, { service });
       await v1.register(metaRoutes, { service, repo: opts.repo });
       await v1.register(archiveRoutes, { repo: opts.repo });
+      await v1.register(youtubeRoutes, { repo: opts.repo, cacheTtlSeconds: opts.cacheTtlSeconds });
     },
     { prefix: "/api/v1" },
   );

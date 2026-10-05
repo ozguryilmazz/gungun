@@ -30,6 +30,11 @@ const configSchema = z.object({
         .filter(Boolean),
     )
     .refine((ips) => ips.every((ip) => isIP(ip) !== 0), { message: "geçersiz IP adresi" }),
+  // YouTube Data API v3 anahtarı (yalnızca worker kullanır; boşsa YouTube sağlayıcısı çalışmaz)
+  YOUTUBE_API_KEY: z
+    .string()
+    .optional()
+    .transform((v) => (v?.trim() ? v.trim() : undefined)),
   // Reverse proxy arkasında çalışırken true yapılmalı (aşama 14)
   TRUST_PROXY: z
     .enum(["true", "false"])

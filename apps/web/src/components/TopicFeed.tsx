@@ -1,4 +1,4 @@
-import type { StatusResponse, TopicListResponse } from "@gundemci/shared";
+import type { StatusResponse, TopicListResponse, YoutubeListResponse } from "@gundemci/shared";
 import { CHANGE_WINDOW_HOURS } from "@gundemci/shared";
 import Link from "next/link";
 import { formatDate, formatRelative } from "@/lib/format";
@@ -9,6 +9,7 @@ import { NewsHighlights } from "./NewsHighlights";
 import { SourceStatus } from "./SourceStatus";
 import { TopicCard } from "./TopicCard";
 import styles from "./TopicFeed.module.css";
+import { YoutubeTrends } from "./YoutubeTrends";
 
 interface Props {
   heading: string;
@@ -19,10 +20,21 @@ interface Props {
   falling: TopicListResponse | null;
   status: StatusResponse | null;
   news: TopicListResponse | null;
+  /** Verilmezse bölüm gösterilmez (ör. kategori sayfaları) */
+  youtube?: YoutubeListResponse | null;
 }
 
 /** Ana sayfa ve kategori sayfalarının ortak düzeni */
-export function TopicFeed({ heading, activeCategory, list, rising, falling, status, news }: Props) {
+export function TopicFeed({
+  heading,
+  activeCategory,
+  list,
+  rising,
+  falling,
+  status,
+  news,
+  youtube,
+}: Props) {
   const now = new Date(list.meta.generatedAt);
   const isMock = list.meta.isMock || !!rising?.meta.isMock || !!falling?.meta.isMock;
   const latest = list.items.reduce<string | null>(
@@ -66,6 +78,8 @@ export function TopicFeed({ heading, activeCategory, list, rising, falling, stat
               ))}
             </ol>
           )}
+
+          {youtube !== undefined ? <YoutubeTrends data={youtube} compact /> : null}
 
           <NewsHighlights list={news} />
         </main>

@@ -21,6 +21,7 @@ try {
 
 const log = pino({ level: config.LOG_LEVEL, base: { proc: "worker" } });
 const { db, client, close } = createDb(config.DATABASE_URL, { max: 3 });
+const secrets = { youtubeApiKey: config.YOUTUBE_API_KEY };
 
 let stopping = false;
 let timer: NodeJS.Timeout | undefined;
@@ -29,7 +30,7 @@ let lastBuild = 0;
 
 /** Veri çek; yeni veri geldiyse veya süre dolduysa gündem konularını güncelle */
 async function cycle() {
-  const newItems = await tick({ db, client, log });
+  const newItems = await tick({ db, client, log, secrets });
   if (newItems > 0 || Date.now() - lastBuild >= BUILD_EVERY_MS) {
     await buildTopics({ db, client, log });
     lastBuild = Date.now();

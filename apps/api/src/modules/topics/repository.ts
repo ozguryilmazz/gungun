@@ -47,6 +47,17 @@ export interface ProviderRow {
   consecutiveFailures: number;
 }
 
+export interface YoutubeRow {
+  rank: number;
+  videoId: string;
+  title: string;
+  channelTitle: string;
+  thumbnailUrl: string | null;
+  viewCount: number | null;
+  publishedAt: Date | null;
+  observedAt: Date;
+}
+
 export interface ArchiveRow {
   slug: string;
   title: string;
@@ -67,6 +78,8 @@ export interface TopicRepository {
   archiveDay(start: Date, end: Date): Promise<ArchiveRow[]>;
   /** Arşivde konusu olan son günler (İstanbul saatine göre) */
   archiveDays(limit: number): Promise<{ date: string; topicCount: number }[]>;
+  /** `since` sonrasındaki EN SON YouTube trend listesi, sıraya göre */
+  latestYoutube(since: Date, limit: number): Promise<YoutubeRow[]>;
   ping(): Promise<void>;
 }
 
@@ -339,6 +352,37 @@ export function createTopicRepository(db: Database): TopicRepository {
         limit ${limit}
       `);
       return rows.map((r) => ({ date: r.day, topicCount: Number(r.n) }));
+    },
+
+    async latestYoutube(since, limit) {
+      const rows = await db.execute<{
+        rank: number;
+        video_id: string;
+        title: string;
+        channel_title: string;
+        thumbnail_url: string | null;
+        view_count: string | number | null;
+        published_at: Date | string | null;
+        observed_at: Date | string;
+      }>(sql`
+        select rank, video_id, title, channel_title, thumbnail_url, view_count, published_at, observed_at
+        from youtube_videos
+        where observed_at = (
+          select max(observed_at) from youtube_videos where observed_at >= ${since.toISOString()}
+        )
+        order by rank asc
+        limit ${Math.min(Math.max(limit, 1), 50)}
+      `);
+      return rows.map((r) => ({
+        rank: Number(r.rank),
+        videoId: r.video_id,
+        title: r.title,
+        channelTitle: r.channel_title,
+        thumbnailUrl: r.thumbnail_url,
+        viewCount: r.view_count === null ? null : Number(r.view_count),
+        publishedAt: r.published_at === null ? null : asDate(r.published_at),
+        observedAt: asDate(r.observed_at),
+      }));
     },
 
     async ping() {

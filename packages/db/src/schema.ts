@@ -190,6 +190,35 @@ export const trendSignals = pgTable(
   ],
 );
 
+/**
+ * YouTube Türkiye trend listesi gözlemleri (her çekmede bir sıra listesi). Yalnızca resmi
+ * YouTube Data API'den gelen metadata; YouTube API şartları gereği 30 günden eski kayıtlar silinir.
+ */
+export const youtubeVideos = pgTable(
+  "youtube_videos",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    providerId: integer("provider_id")
+      .notNull()
+      .references(() => dataProviders.id, { onDelete: "cascade" }),
+    videoId: varchar("video_id", { length: 32 }).notNull(),
+    observedAt: timestamptz("observed_at").notNull(),
+    rank: smallint("rank").notNull(),
+    title: varchar("title", { length: 300 }).notNull(),
+    channelTitle: varchar("channel_title", { length: 200 }).notNull(),
+    publishedAt: timestamptz("published_at"),
+    viewCount: bigint("view_count", { mode: "number" }),
+    thumbnailUrl: varchar("thumbnail_url", { length: 512 }),
+    categoryId: varchar("category_id", { length: 8 }),
+  },
+  (t) => [
+    uniqueIndex("youtube_videos_provider_video_time_uq").on(t.providerId, t.videoId, t.observedAt),
+    index("youtube_videos_observed_idx").on(t.observedAt.desc()),
+    check("youtube_videos_rank_positive", sql`${t.rank} >= 1`),
+    check("youtube_videos_views_positive", sql`${t.viewCount} is null or ${t.viewCount} >= 0`),
+  ],
+);
+
 /** Kaynaklardan gelen tekil içerik. Yalnızca metadata; haber GÖVDESİ SAKLANMAZ. */
 export const sourceItems = pgTable(
   "source_items",
