@@ -1,6 +1,6 @@
 # gundemci.org — Mimari ve MVP Planı (v0.1, taslak)
 
-> Durum: **Plan onaylandı (2026-10-05).** Kararlar en alttaki “Alınan kararlar” bölümünde. Aşama 1–4 tamamlandı (iskelet, veritabanı, tasarım, ilk çalışan arayüz).
+> Durum: **Plan onaylandı (2026-10-05).** Kararlar en alttaki “Alınan kararlar” bölümünde. Aşama 1–5 tamamlandı (iskelet, veritabanı, tasarım, ilk çalışan arayüz, backend API).
 > Tarih: 2026-10-05
 
 ---
@@ -355,7 +355,7 @@ Admin ID’leri UUID; tüm sorgular sahiplik/rol kontrolünden geçer (IDOR önl
 | 2   | Veritabanı                | Drizzle şema + migration + **işaretli** seed verisi                                                       | ✅          |
 | 3   | UI wireframe → tasarım    | Wordmark alternatifleri, renk/tipografi token’ları, kart bileşeni prototipi                               | ✅          |
 | 4   | İlk çalışan frontend      | Ana sayfa + detay + kategori (seed veriden, “ÖRNEK VERİ” şeridiyle)                                       | ✅          |
-| 5   | Backend API               | Public endpoint’ler, validation, hata yönetimi, cache, rate limit, testler                                | ✋          |
+| 5   | Backend API               | Public endpoint’ler, validation, hata yönetimi, cache, rate limit, testler                                | ✅          |
 | 6   | Frontend ↔ API bağlantısı | Mock’tan gerçek API’ye geçiş                                                                              | ✋          |
 | 7   | Veri sağlayıcıları        | Provider arayüzü, safe-http, RSS + Google Trends adapter, worker, `fetch_runs`                            | ✋          |
 | 8   | Pipeline + skor           | Dedupe, basit kümeleme, skor, snapshot, yükselenler/düşenler, arşiv                                       | ✋          |
@@ -440,3 +440,13 @@ Seçim ölçütü: Türkiye’de en çok takip edilen siteler + **farklı yayın
 - Temel güvenlik başlıkları (CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) şimdiden açık; nonce tabanlı sıkı CSP aşama 10’da.
 - Site `noindex` — canlıya geçişe ve gerçek veriye kadar arama motorlarına kapalı.
 - `/arsiv` sayfaları aşama 8’de (snapshot verisi oluşunca); şimdilik menüde yok.
+
+### Aşama 5 notları
+
+- `apps/api`: Fastify, yalnızca `127.0.0.1`’e bağlanır. Rotalar `/api/v1` altında, yalnızca `GET`.
+- Katmanlar: `repository` (parametreli SQL) → `service` (sıralama, değişim, yükselen/düşen, önbellek) → `routes` (girdi doğrulama + yanıtı sözleşme şemasıyla doğrulama).
+- “3 saat önceki” ölçüm: en son ölçümden en az 2,5 saat önce alınmış en yeni ölçüm (30 dk tolerans). Yoksa değişim gösterilmez.
+- Önbellek: bellek içi TTL (varsayılan 30 sn), eşzamanlı aynı istekler tek sorguda birleşir.
+- Güvenlik: helmet (en sıkı CSP), CORS kapalı (API’yi yalnızca web sunucusu çağırır), IP başına rate limit, bilinmeyen sorgu parametreleri ve geçersiz slug veritabanına ulaşmadan reddedilir, istek kimliği sunucuda üretilir, loglarda IP / çerez / yetki başlığı yok.
+- **Rate limit notu:** API’yi tarayıcılar değil web sunucusu çağırdığı için tüm istekler web sunucusunun IP’sinden gelir; bu IP `RATE_LIMIT_ALLOWLIST` ile muaf tutulur. Ziyaretçi bazlı rate limit aşama 10’da web/proxy katmanında uygulanacak.
+- Hata dayanıklılığı test edildi: veritabanı kapanınca API çökmez, genel mesaj döner (`/health/ready` → 503), veritabanı dönünce kendiliğinden toparlanır.

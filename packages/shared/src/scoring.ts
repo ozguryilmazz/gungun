@@ -94,6 +94,12 @@ export function classifyTrend(changePct: number | null): Trend {
 export const CHANGE_WINDOW_HOURS = 3;
 
 /**
+ * Karşılaştırma ölçümü için tolerans (dakika): "3 saat önceki" ölçüm, en son ölçümden
+ * en az (3 saat − tolerans) önce alınmış en yeni ölçümdür. Daha eski ölçüm yoksa değişim hesaplanmaz.
+ */
+export const CHANGE_WINDOW_TOLERANCE_MINUTES = 30;
+
+/**
  * "Yükselenler" listesine girmek için gereken en az kaynak sayısı.
  * Az kaynaktan doğan abartılı yüzdeleri (+900% gibi) eler.
  */

@@ -9,6 +9,12 @@
     "node": ">=22.13.0"
   },
   "scripts": {
+    "dev": "pnpm --parallel --filter @gundemci/web --filter @gundemci/api dev",
+    "dev:web": "pnpm --filter @gundemci/web dev",
+    "dev:api": "pnpm --filter @gundemci/api dev",
+    "build": "pnpm --filter @gundemci/web build",
+    "start": "pnpm --filter @gundemci/web start",
+    "start:api": "pnpm --filter @gundemci/api start",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -19,10 +25,7 @@
     "db:logs": "docker compose --env-file .env -f infra/docker-compose.yml logs -f postgres",
     "db:generate": "pnpm --filter @gundemci/db generate",
     "db:migrate": "pnpm --filter @gundemci/db migrate",
-    "db:seed": "pnpm --filter @gundemci/db seed",
-    "dev": "pnpm --filter @gundemci/web dev",
-    "build": "pnpm --filter @gundemci/web build",
-    "start": "pnpm --filter @gundemci/web start"
+    "db:seed": "pnpm --filter @gundemci/db seed"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -84,6 +84,48 @@ export const TopicDetailResponseSchema = z.object({
   meta: ResponseMetaSchema,
 });
 
+export const TopicHistoryResponseSchema = z.object({
+  items: z.array(z.object({ capturedAt: isoDate, score: score.nullable() })),
+  meta: ResponseMetaSchema,
+});
+
+export const CategoryListResponseSchema = z.object({
+  items: z.array(CategorySchema),
+});
+
+/** Veri kaynaklarının kullanıcıya gösterilebilir durumu (hata ayrıntısı İÇERMEZ) */
+export const ProviderStatusSchema = z.object({
+  key: z.string(),
+  kind: z.enum(["trend", "news", "social", "manual"]),
+  name: z.string(),
+  state: z.enum(["not_connected", "ok", "stale", "error"]),
+  lastSuccessAt: isoDate.nullable(),
+});
+
+export const StatusResponseSchema = z.object({
+  providers: z.array(ProviderStatusSchema),
+  generatedAt: isoDate,
+});
+
+/** Tüm hata yanıtlarının tek biçimi; message kullanıcıya gösterilebilir Türkçe metindir */
+export const ErrorResponseSchema = z.object({
+  error: z.object({
+    code: z.enum([
+      "invalid_request",
+      "not_found",
+      "rate_limited",
+      "internal_error",
+      "service_unavailable",
+    ]),
+    message: z.string(),
+  }),
+});
+
+export type TopicHistoryResponse = z.infer<typeof TopicHistoryResponseSchema>;
+export type CategoryListResponse = z.infer<typeof CategoryListResponseSchema>;
+export type ProviderStatus = z.infer<typeof ProviderStatusSchema>;
+export type StatusResponse = z.infer<typeof StatusResponseSchema>;
+export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 export type Category = z.infer<typeof CategorySchema>;
 export type TopicSummary = z.infer<typeof TopicSummarySchema>;
 export type TopicDetail = z.infer<typeof TopicDetailSchema>;
