@@ -54,13 +54,24 @@ try {
       )?.[1];
       console.log(`Kök     : ${root ?? "(tanınmadı)"}`);
       try {
-        const items = parseFeed(res.body, res.contentType);
+        const items = parseFeed(res.body, res.contentType, new Date(), res.finalUrl);
         console.log(`Öğe     : ${items.length}`);
         for (const i of items.slice(0, 3)) console.log(`  • ${i.title}\n    ${i.url}`);
       } catch (error) {
         console.log(`Ayrıştırma: ${error instanceof FeedParseError ? error.message : "başarısız"}`);
       }
       console.log(`Başlangıç (metin): ${head || "(boş)"}`);
+      // İlk öğenin ham XML yapısı (etiket adlarını görmek için; kontrol karakterleri temizlenir)
+      const firstItem = /<(item|entry)\b[\s\S]*?<\/(item|entry)>/i.exec(
+        res.body.toString("utf8"),
+      )?.[0];
+      if (firstItem) {
+        const safe = firstItem
+          // eslint-disable-next-line no-control-regex
+          .replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g, "")
+          .slice(0, 1500);
+        console.log(`\nİlk öğenin ham yapısı:\n${safe}`);
+      }
     } catch (error) {
       console.log(
         `Hata    : ${error instanceof SafeFetchError ? `${error.code} — ${error.message}` : "beklenmeyen hata"}`,

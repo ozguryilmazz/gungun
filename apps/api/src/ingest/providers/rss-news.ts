@@ -68,7 +68,7 @@ export const rssNewsProvider: IngestProvider = {
           isHostAllowed: (host) => host === feedHost || hostBelongsTo(host, feed.domain),
           userAgent,
         });
-        const parsed = parseFeed(res.body, res.contentType, now);
+        const parsed = parseFeed(res.body, res.contentType, now, res.finalUrl);
         // Başka sitelere işaret eden bağlantılar alınmaz (feed enjeksiyonuna karşı)
         const items = parsed.filter((i) => hostBelongsTo(new URL(i.url).hostname, feed.domain));
         let inserted = 0;

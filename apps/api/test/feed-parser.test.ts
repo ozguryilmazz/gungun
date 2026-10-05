@@ -120,3 +120,45 @@ describe("normalize", () => {
     expect(parseApproxTraffic("yok")).toBeNull();
   });
 });
+
+describe("parseFeed — bağlantı biçimleri", () => {
+  const xml = (items: string) =>
+    Buffer.from(`<?xml version="1.0"?><rss version="2.0"><channel>${items}</channel></rss>`);
+  const base = "https://www.ornekhaber.com.tr/rss/sondakika.xml";
+
+  it("göreli bağlantı feed adresine göre çözülür", () => {
+    const [item] = parseFeed(
+      xml("<item><title>A</title><link>/gundem/a-1</link></item>"),
+      "",
+      NOW,
+      base,
+    );
+    expect(item?.url).toBe("https://www.ornekhaber.com.tr/gundem/a-1");
+  });
+
+  it("sayısal guid bağlantı sayılmaz; mutlak guid kullanılır", () => {
+    const items = parseFeed(
+      xml(
+        "<item><title>A</title><guid>7673337</guid></item>" +
+          '<item><title>B</title><guid isPermaLink="true">https://www.ornekhaber.com.tr/b</guid></item>',
+      ),
+      "",
+      NOW,
+      base,
+    );
+    expect(items.map((i) => i.url)).toEqual(["https://www.ornekhaber.com.tr/b"]);
+  });
+
+  it("atom:link href özniteliği ve protokolsüz (//) adres", () => {
+    const items = parseFeed(
+      xml(
+        '<item><title>A</title><atom:link xmlns:atom="http://www.w3.org/2005/Atom" href="https://www.ornekhaber.com.tr/c"/></item>' +
+          "<item><title>B</title><link>//kotu.example/x</link></item>",
+      ),
+      "",
+      NOW,
+      base,
+    );
+    expect(items.map((i) => i.url)).toEqual(["https://www.ornekhaber.com.tr/c"]);
+  });
+});
