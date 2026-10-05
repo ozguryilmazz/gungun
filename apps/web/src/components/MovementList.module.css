@@ -76,3 +76,16 @@
     padding: 20px 20px 8px;
   }
 }
+
+.statusRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  font-size: 14px;
+}
+
+.statusValue {
+  color: var(--muted);
+  text-align: right;
+}

@@ -1,72 +1,120 @@
-import { RISING_MIN_SOURCES } from "@gundemci/shared";
-import { describe, expect, it } from "vitest";
-import { getFalling, getRising, getTopic, getTopicList } from "../src/lib/data";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  DataUnavailableError,
+  getRising,
+  getStatus,
+  getTopic,
+  getTopicList,
+} from "../src/lib/data";
 
-describe("veri katmanı (örnek veri)", () => {
-  it("her yanıt örnek veri olarak işaretli", async () => {
-    const list = await getTopicList();
-    expect(list.meta.isMock).toBe(true);
-    expect(list.items.length).toBeGreaterThan(0);
-    for (const t of list.items) {
-      expect(t.isMock).toBe(true);
-      expect(t.title.startsWith("Örnek:")).toBe(true);
-    }
+const NOW = "2026-10-05T12:00:00.000Z";
+
+const summary = {
+  slug: "ornek-konu",
+  title: "Örnek: Konu",
+  category: { slug: "teknoloji", name: "Teknoloji" },
+  rank: 1,
+  score: 92,
+  previousScore: 55,
+  changePct: 67,
+  trend: "surging",
+  signalsAvailable: 3,
+  signalsTotal: 4,
+  sourceCount: 4,
+  summary: "Bu bir örnek konudur.",
+  updatedAt: NOW,
+  isMock: true,
+};
+
+const listBody = { items: [summary], meta: { generatedAt: NOW, isMock: true } };
+
+const detailBody = {
+  item: {
+    ...summary,
+    reasons: ["Örnek: neden"],
+    summaryOrigin: "manual",
+    firstSeenAt: NOW,
+    components: [
+      { key: "news_visibility", label: "Haber görünürlüğü", available: true, value: 90 },
+    ],
+    timeline: [],
+    sources: [
+      { title: "Kaynak", url: "https://example.org/1", publisherName: "Örnek", publishedAt: NOW },
+    ],
+  },
+  meta: { generatedAt: NOW, isMock: true },
+};
+
+const fetchMock = vi.fn<typeof fetch>();
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+const requestedUrl = (call = 0) => String(fetchMock.mock.calls[call]?.[0]);
+
+beforeEach(() => {
+  fetchMock.mockReset();
+  vi.stubGlobal("fetch", fetchMock);
+  vi.spyOn(console, "error").mockImplementation(() => {});
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+describe("veri katmanı → API", () => {
+  it("listeyi API'den alır ve sözleşmeyle doğrular", async () => {
+    fetchMock.mockResolvedValue(json(listBody));
+    const result = await getTopicList({ category: "spor", limit: 5 });
+    expect(result.items[0]?.slug).toBe("ornek-konu");
+    expect(requestedUrl()).toBe("http://127.0.0.1:4000/api/v1/topics?limit=5&category=spor");
   });
 
-  it("liste skora göre sıralı ve sıra numaraları ardışık", async () => {
-    const { items } = await getTopicList();
-    items.forEach((t, i) => expect(t.rank).toBe(i + 1));
-    for (let i = 1; i < items.length; i++) {
-      expect(items[i - 1]!.score ?? -1).toBeGreaterThanOrEqual(items[i]!.score ?? -1);
-    }
+  it("limit sınırlanır", async () => {
+    fetchMock.mockResolvedValue(json(listBody));
+    await getRising(10_000);
+    expect(requestedUrl()).toContain("limit=50");
   });
 
-  it("kategori filtresi ve limit sınırları", async () => {
-    const spor = await getTopicList({ category: "spor" });
-    expect(spor.items.every((t) => t.category.slug === "spor")).toBe(true);
-    expect((await getTopicList({ category: "olmayan" })).items).toHaveLength(0);
-    expect((await getTopicList({ limit: 2 })).items).toHaveLength(2);
-    expect((await getTopicList({ limit: -5 })).items).toHaveLength(1);
-    expect((await getTopicList({ limit: 10_000 })).items.length).toBeLessThanOrEqual(50);
+  it("detay: 404 → null", async () => {
+    fetchMock.mockResolvedValue(json({ error: { code: "not_found", message: "x" } }, 404));
+    expect(await getTopic("olmayan-konu")).toBeNull();
   });
 
-  it("yükselenler: yalnızca yükselen ve yeterli kaynaklı konular, azalan sırada", async () => {
-    const { items } = await getRising();
-    expect(items.length).toBeGreaterThan(0);
-    for (const t of items) {
-      expect(["surging", "rising"]).toContain(t.trend);
-      expect(t.sourceCount).toBeGreaterThanOrEqual(RISING_MIN_SOURCES);
-    }
-    for (let i = 1; i < items.length; i++) {
-      expect(items[i - 1]!.changePct!).toBeGreaterThanOrEqual(items[i]!.changePct!);
-    }
-    // Uzay konusu +%100'ün üzerinde yükseliyor ama yalnızca 2 kaynakta: listede olmamalı
-    expect(items.some((t) => t.slug === "ornek-uzay-gorevi-firlatmasi")).toBe(false);
+  it("detay: başarılı yanıt", async () => {
+    fetchMock.mockResolvedValue(json(detailBody));
+    const result = await getTopic("ornek-konu");
+    expect(result?.item.sources[0]?.url).toBe("https://example.org/1");
+    expect(requestedUrl()).toBe("http://127.0.0.1:4000/api/v1/topics/ornek-konu");
   });
 
-  it("düşenler yalnızca düşen konular", async () => {
-    const { items } = await getFalling();
-    expect(items.length).toBeGreaterThan(0);
-    expect(items.every((t) => t.trend === "falling")).toBe(true);
-  });
-
-  it("detay: verisi olmayan sinyal 'available=false' ve değeri yok", async () => {
-    const result = await getTopic("ornek-uzay-gorevi-firlatmasi");
-    expect(result).not.toBeNull();
-    const search = result!.item.components.find((c) => c.key === "search_interest");
-    expect(search).toEqual(expect.objectContaining({ available: false, value: null }));
-    expect(result!.item.signalsAvailable).toBe(2);
-  });
-
-  it("detay: kaynak bağlantıları yalnızca örnek alan adına gider", async () => {
-    const result = await getTopic("ornek-yeni-nesil-akilli-telefon-tanitimi");
-    for (const s of result!.item.sources) expect(new URL(s.url).hostname).toBe("example.org");
-    expect(result!.item.timeline.length).toBeGreaterThan(0);
-  });
-
-  it("geçersiz veya bilinmeyen slug null döner", async () => {
-    for (const slug of ["../../etc/passwd", "<script>", "OLMAYAN", "", "olmayan-konu"]) {
+  it("geçersiz slug API'ye hiç gönderilmez", async () => {
+    for (const slug of ["../../etc/passwd", "https://kotu.example", "a/b", "<script>", ""]) {
       expect(await getTopic(slug)).toBeNull();
     }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("sözleşmeye uymayan yanıt (ör. zararlı link) reddedilir", async () => {
+    const bad = structuredClone(detailBody);
+    bad.item.sources[0]!.url = "javascript:alert(1)";
+    fetchMock.mockResolvedValue(json(bad));
+    await expect(getTopic("ornek-konu")).rejects.toBeInstanceOf(DataUnavailableError);
+  });
+
+  it("API hatası, ağ hatası ve bozuk JSON → DataUnavailableError", async () => {
+    fetchMock.mockResolvedValueOnce(json({ error: {} }, 500));
+    await expect(getTopicList()).rejects.toBeInstanceOf(DataUnavailableError);
+    fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
+    await expect(getTopicList()).rejects.toBeInstanceOf(DataUnavailableError);
+    fetchMock.mockResolvedValueOnce(new Response("<html>", { status: 200 }));
+    await expect(getStatus()).rejects.toBeInstanceOf(DataUnavailableError);
+  });
+
+  it("yönlendirme izlenmez ve zaman aşımı ayarlı", async () => {
+    fetchMock.mockResolvedValue(json(listBody));
+    await getTopicList();
+    const init = fetchMock.mock.calls[0]?.[1];
+    expect(init?.redirect).toBe("error");
+    expect(init?.signal).toBeInstanceOf(AbortSignal);
   });
 });

@@ -2,8 +2,8 @@
 
 Türkiye'de internette **ne konuşuluyor, neden gündemde ve ne kadar hızlı yükseliyor** sorusuna yanıt veren gündem analiz platformu.
 
-> Durum: **Aşama 5 — backend API.** Arayüz (aşama 4) ve veritabanından okuyan public API hazır.
-> Arayüz henüz API'ye bağlı değil, kendi örnek veri kaynağını kullanıyor (aşama 6'da bağlanacak).
+> Durum: **Aşama 6 — arayüz API'ye bağlı.** Arayüz → API → PostgreSQL zinciri çalışıyor.
+> Gösterilen konular `pnpm db:seed` ile yüklenen ÖRNEK verilerdir; gerçek veri kaynakları aşama 7'de.
 > Mimari ve MVP planı: [`docs/01-mimari-plan.md`](docs/01-mimari-plan.md)
 
 ## Gereksinimler
@@ -32,7 +32,7 @@ pnpm db:up
 pnpm db:migrate
 pnpm db:seed
 
-# Arayüz + API'yi birlikte başlat
+# Arayüz + API'yi birlikte başlat (Docker'daki Postgres açık olmalı)
 #   arayüz → http://localhost:3000
 #   API    → http://127.0.0.1:4000/api/v1/topics
 pnpm dev
@@ -73,7 +73,7 @@ Yanıt biçimleri `packages/shared/src/contract.ts` içindeki şemalarla tanıml
 ## Klasör yapısı
 
 ```
-apps/web    Next.js arayüzü (şimdilik örnek veri kaynağıyla)
+apps/web    Next.js arayüzü (veriyi yalnızca API'den alır)
 apps/api    Fastify public API (PostgreSQL'den okur)
 packages/   config (ortak TS ayarları), db (şema, migration, seed),
             shared (API sözleşmesi, skor hesabı, kategoriler, örnek konular)

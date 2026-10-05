@@ -1,91 +1,56 @@
 // Arayüzün tek veri erişim noktası. Yalnızca sunucuda çalışır; tarayıcıya gönderilmez.
-// Aşama 6'da bu fonksiyonların içi backend API çağrısına çevrilecek, imzaları aynı kalacak.
+// Tüm veri backend API'den gelir (apps/api) ve sözleşme şemalarıyla doğrulanır.
 import "server-only";
 import {
-  RISING_MIN_SOURCES,
+  StatusResponseSchema,
   TopicDetailResponseSchema,
   TopicListResponseSchema,
-  findCategory,
   isValidSlug,
-  type TopicDetail,
+  type StatusResponse,
   type TopicDetailResponse,
   type TopicListResponse,
-  type TopicSummary,
 } from "@gundemci/shared";
-import { buildMockTopics } from "./mock-source";
+import { DataUnavailableError, apiGet } from "./api-client";
+
+export { DataUnavailableError } from "./api-client";
 
 const MAX_LIMIT = 50;
+const clampLimit = (limit: number) => Math.min(Math.max(Math.trunc(limit) || 1, 1), MAX_LIMIT);
 
-function toSummary(detail: TopicDetail): TopicSummary {
-  return {
-    slug: detail.slug,
-    title: detail.title,
-    category: detail.category,
-    rank: detail.rank,
-    score: detail.score,
-    previousScore: detail.previousScore,
-    changePct: detail.changePct,
-    trend: detail.trend,
-    signalsAvailable: detail.signalsAvailable,
-    signalsTotal: detail.signalsTotal,
-    sourceCount: detail.sourceCount,
-    summary: detail.summary,
-    updatedAt: detail.updatedAt,
-    isMock: detail.isMock,
-  };
+async function required<T>(promise: Promise<T | null>): Promise<T> {
+  const result = await promise;
+  // Liste uç noktaları 404 döndürmemeli; dönerse veri yok sayılır
+  if (result === null) throw new DataUnavailableError("Beklenen veri bulunamadı");
+  return result;
 }
-
-function listResponse(items: TopicDetail[], now: Date): TopicListResponse {
-  // Sözleşme doğrulaması: kaynak ne olursa olsun arayüze yalnızca geçerli veri ulaşır
-  return TopicListResponseSchema.parse({
-    items: items.map(toSummary),
-    meta: { generatedAt: now.toISOString(), isMock: true },
-  });
-}
-
-const clampLimit = (limit: number) => Math.min(Math.max(Math.trunc(limit), 1), MAX_LIMIT);
 
 export async function getTopicList(
   options: { category?: string; limit?: number } = {},
 ): Promise<TopicListResponse> {
-  const now = new Date();
-  let topics = buildMockTopics(now);
-  if (options.category !== undefined) {
-    topics = topics.filter((t) => t.category.slug === options.category);
-  }
-  return listResponse(topics.slice(0, clampLimit(options.limit ?? 20)), now);
+  const params = new URLSearchParams({ limit: String(clampLimit(options.limit ?? 20)) });
+  if (options.category !== undefined) params.set("category", options.category);
+  return required(apiGet(`/api/v1/topics?${params}`, TopicListResponseSchema));
 }
 
-/** Son penceredeki en hızlı yükselenler; az kaynaklı konular elenir */
 export async function getRising(limit = 5): Promise<TopicListResponse> {
-  const now = new Date();
-  const topics = buildMockTopics(now)
-    .filter((t) => (t.trend === "surging" || t.trend === "rising") && t.changePct !== null)
-    .filter((t) => t.sourceCount >= RISING_MIN_SOURCES)
-    .sort((a, b) => (b.changePct ?? 0) - (a.changePct ?? 0));
-  return listResponse(topics.slice(0, clampLimit(limit)), now);
+  return required(
+    apiGet(`/api/v1/topics/rising?limit=${clampLimit(limit)}`, TopicListResponseSchema),
+  );
 }
 
 export async function getFalling(limit = 5): Promise<TopicListResponse> {
-  const now = new Date();
-  const topics = buildMockTopics(now)
-    .filter((t) => t.trend === "falling")
-    .sort((a, b) => (a.changePct ?? 0) - (b.changePct ?? 0));
-  return listResponse(topics.slice(0, clampLimit(limit)), now);
+  return required(
+    apiGet(`/api/v1/topics/falling?limit=${clampLimit(limit)}`, TopicListResponseSchema),
+  );
 }
 
+/** Bilinmeyen veya geçersiz konu → null (sayfa 404 gösterir) */
 export async function getTopic(slug: string): Promise<TopicDetailResponse | null> {
-  // Geçersiz slug veri katmanına hiç ulaşmaz
+  // Geçersiz slug API'ye hiç gönderilmez
   if (!isValidSlug(slug)) return null;
-  const now = new Date();
-  const topic = buildMockTopics(now).find((t) => t.slug === slug);
-  if (!topic) return null;
-  return TopicDetailResponseSchema.parse({
-    item: topic,
-    meta: { generatedAt: now.toISOString(), isMock: true },
-  });
+  return apiGet(`/api/v1/topics/${encodeURIComponent(slug)}`, TopicDetailResponseSchema);
 }
 
-export function getCategory(slug: string) {
-  return findCategory(slug);
+export async function getStatus(): Promise<StatusResponse> {
+  return required(apiGet("/api/v1/meta/status", StatusResponseSchema));
 }

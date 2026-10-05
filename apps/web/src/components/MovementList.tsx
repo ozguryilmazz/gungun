@@ -7,7 +7,8 @@ interface Props {
   id: string;
   title: string;
   description: string;
-  items: TopicSummary[];
+  /** null: veri şu anda alınamıyor */
+  items: TopicSummary[] | null;
   emptyText: string;
   numbered?: boolean;
 }
@@ -29,7 +30,9 @@ export function MovementList({
         </h2>
         <p className={styles.description}>{description}</p>
       </div>
-      {items.length === 0 ? (
+      {items === null ? (
+        <p className={styles.empty}>Bu veri şu anda güncellenemiyor.</p>
+      ) : items.length === 0 ? (
         <p className={styles.empty}>{emptyText}</p>
       ) : (
         <ol className={styles.list}>

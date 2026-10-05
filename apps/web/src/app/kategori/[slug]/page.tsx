@@ -1,16 +1,18 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { findCategory } from "@gundemci/shared";
 import { TopicFeed } from "@/components/TopicFeed";
-import { getCategory, getFalling, getRising, getTopicList } from "@/lib/data";
+import { getFalling, getRising, getStatus, getTopicList } from "@/lib/data";
+import { optional } from "@/lib/data/optional";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 interface Props {
   params: Promise<{ slug: string }>;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const category = getCategory((await params).slug);
+  const category = findCategory((await params).slug);
   if (!category) return {};
   return {
     title: `${category.name} gündemi`,
@@ -19,14 +21,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function CategoryPage({ params }: Props) {
-  // Yalnızca tanımlı kategoriler; diğer her değer 404
-  const category = getCategory((await params).slug);
+  // Yalnızca tanımlı kategoriler; diğer her değer API'ye gitmeden 404
+  const category = findCategory((await params).slug);
   if (!category) notFound();
 
-  const [list, rising, falling] = await Promise.all([
+  const [list, rising, falling, status] = await Promise.all([
     getTopicList({ category: category.slug }),
-    getRising(),
-    getFalling(),
+    optional(getRising()),
+    optional(getFalling()),
+    optional(getStatus()),
   ]);
   return (
     <TopicFeed
@@ -35,6 +38,7 @@ export default async function CategoryPage({ params }: Props) {
       list={list}
       rising={rising}
       falling={falling}
+      status={status}
     />
   );
 }

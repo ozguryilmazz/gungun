@@ -1,4 +1,18 @@
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { parseEnv } from "node:util";
 import type { NextConfig } from "next";
+
+// Kök dizindeki ortak .env'den YALNIZCA web sunucusunun ihtiyaç duyduğu sunucu tarafı
+// değişkenleri alınır. NEXT_PUBLIC_ önekli değişken yok: hiçbir ayar tarayıcıya gönderilmez.
+const SERVER_ENV_KEYS = ["API_INTERNAL_URL"] as const;
+const rootEnvPath = resolve(process.cwd(), "../../.env");
+if (existsSync(rootEnvPath)) {
+  const parsed = parseEnv(readFileSync(rootEnvPath, "utf8"));
+  for (const key of SERVER_ENV_KEYS) {
+    if (process.env[key] === undefined && parsed[key] !== undefined) process.env[key] = parsed[key];
+  }
+}
 
 const isDev = process.env.NODE_ENV !== "production";
 

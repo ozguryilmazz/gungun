@@ -19,9 +19,10 @@ const configSchema = z.object({
   CACHE_TTL_SECONDS: z.coerce.number().int().min(0).max(3600).default(30),
   RATE_LIMIT_MAX: z.coerce.number().int().min(1).max(100_000).default(120),
   // Rate limit'ten muaf tutulacak IP'ler (örn. API'yi sunucu tarafında çağıran web sunucusu)
+  // Varsayılan: aynı bilgisayardaki web sunucusu (API'yi sunucu tarafında çağırır)
   RATE_LIMIT_ALLOWLIST: z
     .string()
-    .default("")
+    .default("127.0.0.1,::1")
     .transform((v) =>
       v
         .split(",")

@@ -1,6 +1,6 @@
 # gundemci.org — Mimari ve MVP Planı (v0.1, taslak)
 
-> Durum: **Plan onaylandı (2026-10-05).** Kararlar en alttaki “Alınan kararlar” bölümünde. Aşama 1–5 tamamlandı (iskelet, veritabanı, tasarım, ilk çalışan arayüz, backend API).
+> Durum: **Plan onaylandı (2026-10-05).** Kararlar en alttaki “Alınan kararlar” bölümünde. Aşama 1–6 tamamlandı (iskelet, veritabanı, tasarım, arayüz, backend API, arayüz ↔ API).
 > Tarih: 2026-10-05
 
 ---
@@ -356,7 +356,7 @@ Admin ID’leri UUID; tüm sorgular sahiplik/rol kontrolünden geçer (IDOR önl
 | 3   | UI wireframe → tasarım    | Wordmark alternatifleri, renk/tipografi token’ları, kart bileşeni prototipi                               | ✅          |
 | 4   | İlk çalışan frontend      | Ana sayfa + detay + kategori (seed veriden, “ÖRNEK VERİ” şeridiyle)                                       | ✅          |
 | 5   | Backend API               | Public endpoint’ler, validation, hata yönetimi, cache, rate limit, testler                                | ✅          |
-| 6   | Frontend ↔ API bağlantısı | Mock’tan gerçek API’ye geçiş                                                                              | ✋          |
+| 6   | Frontend ↔ API bağlantısı | Mock’tan gerçek API’ye geçiş                                                                              | ✅          |
 | 7   | Veri sağlayıcıları        | Provider arayüzü, safe-http, RSS + Google Trends adapter, worker, `fetch_runs`                            | ✋          |
 | 8   | Pipeline + skor           | Dedupe, basit kümeleme, skor, snapshot, yükselenler/düşenler, arşiv                                       | ✋          |
 | 9   | Admin                     | Auth, konu yönetimi, provider durumu, audit log                                                           | ✋          |
@@ -450,3 +450,14 @@ Seçim ölçütü: Türkiye’de en çok takip edilen siteler + **farklı yayın
 - Güvenlik: helmet (en sıkı CSP), CORS kapalı (API’yi yalnızca web sunucusu çağırır), IP başına rate limit, bilinmeyen sorgu parametreleri ve geçersiz slug veritabanına ulaşmadan reddedilir, istek kimliği sunucuda üretilir, loglarda IP / çerez / yetki başlığı yok.
 - **Rate limit notu:** API’yi tarayıcılar değil web sunucusu çağırdığı için tüm istekler web sunucusunun IP’sinden gelir; bu IP `RATE_LIMIT_ALLOWLIST` ile muaf tutulur. Ziyaretçi bazlı rate limit aşama 10’da web/proxy katmanında uygulanacak.
 - Hata dayanıklılığı test edildi: veritabanı kapanınca API çökmez, genel mesaj döner (`/health/ready` → 503), veritabanı dönünce kendiliğinden toparlanır.
+
+### Aşama 6 notları
+
+- Arayüzün geçici örnek veri kaynağı kaldırıldı; tüm veri `apps/web/src/lib/data` → API’den gelir ve sözleşme şemalarıyla doğrulanır (sözleşmeye uymayan yanıt, ör. `javascript:` bağlantı, reddedilir).
+- API istemcisi: yalnızca sunucuda, 5 sn zaman aşımı, yönlendirme izlenmez, adres yalnızca `API_INTERNAL_URL`’den (kimlik bilgisi içermeyen http/https), yollar kod içinde sabit + `encodeURIComponent`.
+- Hata davranışı: ana liste alınamazsa “Bu veri şu anda güncellenemiyor” sayfası; yükselenler / düşenler / kaynak durumu gibi yan bölümler alınamazsa yalnızca o bölüm bu mesajı gösterir. Daha önce alınmış veri önbellekten (30 sn) gösterilmeye devam edebilir.
+- Geçersiz konu adresi ve bilinmeyen kategori API’ye gitmeden 404.
+- Sayfalar dinamik (her istekte API, fetch önbelleği 30 sn) — derleme sırasında API’nin çalışması gerekmez.
+- Geliştirme ve `start` sunucusu yalnızca `127.0.0.1`’e bağlanır (ağdaki diğer cihazlar erişemez).
+- API’de `RATE_LIMIT_ALLOWLIST` varsayılanı `127.0.0.1,::1` (aynı bilgisayardaki web sunucusu).
+- Kenar çubuğuna “Veri kaynakları” durumu eklendi (tasarımdaki panel); şu an tümü “Henüz bağlanmadı”.

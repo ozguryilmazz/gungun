@@ -1,11 +1,18 @@
 import { TopicFeed } from "@/components/TopicFeed";
-import { getFalling, getRising, getTopicList } from "@/lib/data";
+import { getFalling, getRising, getStatus, getTopicList } from "@/lib/data";
+import { optional } from "@/lib/data/optional";
 
-// Liste en fazla 60 saniyede bir yeniden oluşturulur
-export const revalidate = 60;
+// Her istekte API'den okunur (API ve fetch önbelleği 30 sn)
+export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [list, rising, falling] = await Promise.all([getTopicList(), getRising(), getFalling()]);
+  // Ana liste zorunlu: alınamazsa hata sayfası. Diğer bölümler isteğe bağlı.
+  const [list, rising, falling, status] = await Promise.all([
+    getTopicList(),
+    optional(getRising()),
+    optional(getFalling()),
+    optional(getStatus()),
+  ]);
   return (
     <TopicFeed
       heading="Bugün Türkiye’de gündem"
@@ -13,6 +20,7 @@ export default async function HomePage() {
       list={list}
       rising={rising}
       falling={falling}
+      status={status}
     />
   );
 }

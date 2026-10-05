@@ -9,7 +9,7 @@ import { getTopic } from "@/lib/data";
 import { formatClock, formatRelative } from "@/lib/format";
 import styles from "./page.module.css";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 interface Props {
   params: Promise<{ slug: string }>;

@@ -1,10 +1,11 @@
-import type { TopicListResponse } from "@gundemci/shared";
+import type { StatusResponse, TopicListResponse } from "@gundemci/shared";
 import { CHANGE_WINDOW_HOURS, RISING_MIN_SOURCES } from "@gundemci/shared";
 import Link from "next/link";
 import { formatDate, formatRelative } from "@/lib/format";
 import { CategoryNav } from "./CategoryNav";
 import { MockBanner } from "./MockBanner";
 import { MovementList } from "./MovementList";
+import { SourceStatus } from "./SourceStatus";
 import { TopicCard } from "./TopicCard";
 import styles from "./TopicFeed.module.css";
 
@@ -12,14 +13,16 @@ interface Props {
   heading: string;
   activeCategory: string | null;
   list: TopicListResponse;
-  rising: TopicListResponse;
-  falling: TopicListResponse;
+  /** null: bu bölümün verisi şu anda alınamıyor (sayfanın geri kalanı çalışır) */
+  rising: TopicListResponse | null;
+  falling: TopicListResponse | null;
+  status: StatusResponse | null;
 }
 
 /** Ana sayfa ve kategori sayfalarının ortak düzeni */
-export function TopicFeed({ heading, activeCategory, list, rising, falling }: Props) {
+export function TopicFeed({ heading, activeCategory, list, rising, falling, status }: Props) {
   const now = new Date(list.meta.generatedAt);
-  const isMock = list.meta.isMock || rising.meta.isMock || falling.meta.isMock;
+  const isMock = list.meta.isMock || !!rising?.meta.isMock || !!falling?.meta.isMock;
   const latest = list.items.reduce<string | null>(
     (acc, t) => (acc === null || t.updatedAt > acc ? t.updatedAt : acc),
     null,
@@ -64,7 +67,7 @@ export function TopicFeed({ heading, activeCategory, list, rising, falling }: Pr
               id="rising-title"
               title="Şu anda yükselenler"
               description={`Son ${CHANGE_WINDOW_HOURS} saatteki değişim · en az ${RISING_MIN_SOURCES} kaynakta yer alan konular`}
-              items={rising.items}
+              items={rising?.items ?? null}
               emptyText="Şu anda belirgin şekilde yükselen bir konu yok."
               numbered
             />
@@ -73,9 +76,10 @@ export function TopicFeed({ heading, activeCategory, list, rising, falling }: Pr
             id="falling-title"
             title="Gündemden düşenler"
             description={`Son ${CHANGE_WINDOW_HOURS} saatteki değişim`}
-            items={falling.items}
+            items={falling?.items ?? null}
             emptyText="Şu anda belirgin şekilde düşen bir konu yok."
           />
+          <SourceStatus status={status} />
         </aside>
       </div>
     </>
