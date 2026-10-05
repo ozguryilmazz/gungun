@@ -160,6 +160,14 @@ describe("meta", () => {
     expect(res.body).not.toContain("config");
   });
 
+  it("kök adres yol gösterir, teknik ayrıntı vermez", async () => {
+    const { app } = await setup();
+    const res = await app.inject("/");
+    expect(res.statusCode).toBe(200);
+    expect(res.json().message).toContain("localhost:3000");
+    expect(res.body).not.toMatch(/fastify|node|version|postgres/i);
+  });
+
   it("health ve ready", async () => {
     const repo = fakeRepo();
     const { app } = await setup(repo);

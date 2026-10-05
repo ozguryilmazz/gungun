@@ -28,6 +28,15 @@ export async function metaRoutes(
 
 /** Sağlık kontrolleri — iç ayrıntı (DB adı, sürüm, hata) vermez */
 export async function healthRoutes(app: FastifyInstance, opts: { repo: TopicRepository }) {
+  // Tarayıcıda yanlışlıkla API adresi açılırsa yol gösterir (sürüm/teknoloji bilgisi vermez)
+  app.get("/", async (_req, reply) =>
+    reply.header("cache-control", "no-store").send({
+      service: "gündemci veri servisi (API)",
+      message:
+        "Bu adres sitenin arka planda kullandığı veri servisidir. Siteyi görmek için web adresini (yerelde http://localhost:3000) açın.",
+    }),
+  );
+
   app.get("/health", async (_req, reply) =>
     reply.header("cache-control", "no-store").send({ status: "ok" }),
   );
