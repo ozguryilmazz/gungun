@@ -5,6 +5,7 @@ import { eq, sql } from "drizzle-orm";
 import { dataProviders, fetchRuns, type Database } from "@gundemci/db";
 import type postgres from "postgres";
 import { safeFetch } from "../lib/safe-http.ts";
+import { googleNewsSearchProvider } from "./providers/google-news-search.ts";
 import { googleTrendsProvider } from "./providers/google-trends.ts";
 import { rssNewsProvider } from "./providers/rss-news.ts";
 import { youtubeTrendingProvider } from "./providers/youtube-trending.ts";
@@ -20,6 +21,7 @@ import type {
 export const PROVIDERS: Record<string, IngestProvider> = {
   [rssNewsProvider.key]: rssNewsProvider,
   [googleTrendsProvider.key]: googleTrendsProvider,
+  [googleNewsSearchProvider.key]: googleNewsSearchProvider,
   [youtubeTrendingProvider.key]: youtubeTrendingProvider,
 };
 

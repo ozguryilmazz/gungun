@@ -130,3 +130,14 @@ Sonraki aşamaların numaraları birer kayar: güvenlik sertleştirme 11, SEO 12
 - **API:** `GET /api/v1/youtube?limit=` — en güncel liste. 24 saatten eski liste gösterilmez.
 - **Arayüz:** Ana sayfada “YouTube’da Türkiye trendleri” (ilk 10) ve `/youtube` (ilk 50). Video sitede oynatılmaz; bağlantı YouTube’a gider. Kaynak olarak YouTube belirtilir.
 - **Sosyal sinyal (skorun %25’i):** Trend terimi YouTube trend videolarının başlığında geçiyorsa en iyi sıraya göre değer alır (1. sıra = 1,0; 50. sıra ≈ 0,3; her ek video +0,1, en fazla +0,2). Geçmiyorsa 0. YouTube listesi 2 saatten eskiyse “Veri bekleniyor”. Haber konularında sosyal sinyal ölçülmez.
+
+### Açıklaması olmayan aramalar ve Google Haberler araması
+
+- **Sıralama:** Trend listesinde önce aramayı açıklayan en az bir haberi olan konular, sonra açıklaması bulunamayanlar gelir. Her grup kendi içinde skora göre sıralanır; skor değişmez. Kartta “açıklayan haber henüz bulunamadı” notu gösterilir.
+- **Sağlayıcı `google_news_search`:** Güncel her trend terimi için Google Haberler’in herkese açık arama RSS’inde (`news.google.com/rss/search`, son 1 gün, Türkçe) arama yapar.
+  - Yalnızca başlık, kaynak adı ve bağlantı alınır; yalnızca başlığında terim geçen, son 48 saatin haberleri. Terim başına en fazla 10 haber.
+  - **robots.txt** her çalışmada denetlenir (6 saat önbellek). İzin yoksa ya da okunamazsa hiç istek atılmaz.
+  - Aynı terim en fazla saatte bir aranır; istekler arasında 1 sn beklenir; 429 alınırsa o çalışma durur.
+  - Veritabanı: `trend_news_links` (terim ↔ haber) ve `trend_news_searches` (son arama zamanı), migration `0004_trend_news`.
+- **Pipeline:** Bulunan haberler Google’ın ilgili haberleriyle birlikte trend konusuna bağlanır; kart başlığı ve “Neden gündemde?” kaynakları bunlardan gelir.
+- **Değerlendirilip reddedilenler:** pytrends ve ücretli SERP servisleri (SerpApi vb.) Google’ı kazıyıp bot korumasını aştığı için kullanılmaz. Google Trends API (alpha) şimdilik beklemede.

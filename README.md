@@ -58,7 +58,8 @@ pnpm dev
 ## Veri toplama
 
 - **Sağlayıcılar:** `rss_news` (12 haber sitesinin RSS'i), `google_trends` (Türkiye trend RSS'i) ve
-  `youtube_trending` (resmi YouTube Data API v3, Türkiye trend videoları; `.env`'de `YOUTUBE_API_KEY` gerekir).
+  `google_news_search` (Google Haberler arama RSS'i: trend aramaları açıklayan haberler; robots.txt
+  her çalışmada denetlenir) ve `youtube_trending` (resmi YouTube Data API v3, Türkiye trend videoları; `.env`'de `YOUTUBE_API_KEY` gerekir).
   Hepsi **kapalı** başlar.
 - **Ne alınır:** Yalnızca başlık, bağlantı ve yayın zamanı. Haber metni alınmaz.
 - **Güvenlik:** Dış istekler yalnızca kayıtlı adreslere gider. İç ağ adresleri, aşırı büyük yanıtlar ve
@@ -72,6 +73,7 @@ pnpm dev
 pnpm fetch:once all   # her kaynağın sonucunu tek tek gösterir
 pnpm providers enable rss_news
 pnpm providers enable google_trends
+pnpm providers enable google_news_search
 pnpm providers enable youtube_trending
 pnpm worker           # açık sağlayıcıları 10–15 dakikada bir çalıştırır (Ctrl+C ile durur)
 ```

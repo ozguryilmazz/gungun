@@ -15,6 +15,8 @@ export interface FeedItem {
   title: string;
   url: string;
   publishedAt: Date | null;
+  /** RSS <source> öğesi (ör. Google Haberler'de haberi yayımlayan site); yoksa null */
+  source: string | null;
 }
 
 export interface TrendItem {
@@ -155,7 +157,8 @@ export function parseFeed(
     }
     if (!title || !url) continue;
     const date = text(raw.pubDate) || text(raw.date) || text(raw.published) || text(raw.updated);
-    items.push({ title, url, publishedAt: parseDate(date, now) });
+    const source = cleanText(text(raw.source)).slice(0, 96) || null;
+    items.push({ title, url, publishedAt: parseDate(date, now), source });
   }
   return items;
 }

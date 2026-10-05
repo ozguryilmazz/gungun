@@ -547,6 +547,27 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
             and observed_at <= ${now.toISOString()}
         `)
       : [];
+    // ── Girdi 2b: Google Haberler aramasında trend terimleri için bulunan haberler (son 24 saat) ──
+    const searchRows = await db.execute<{
+      trend_key: string;
+      title: string;
+      url: string;
+      source: string | null;
+    }>(sql`
+      select l.trend_key, si.title, si.url, si.source_name as source
+      from trend_news_links l
+      join source_items si on si.id = l.source_item_id
+      where l.found_at >= ${hoursAgo(now, RULES.windowHours).toISOString()}
+        and l.found_at <= ${now.toISOString()}
+      order by coalesce(si.published_at, si.fetched_at) desc
+    `);
+    const searchNews = new Map<string, TrendInfo["related"]>();
+    for (const r of searchRows) {
+      const list = searchNews.get(r.trend_key) ?? [];
+      list.push({ title: r.title, url: r.url, source: r.source ?? "Google Haberler" });
+      searchNews.set(r.trend_key, list);
+    }
+
     // ── Girdi 3: YouTube Türkiye trend listesi (sosyal sinyal; yalnızca güncelse) ──
     const [youtubeProvider] = await db
       .select({ id: dataProviders.id, lastSuccessAt: dataProviders.lastSuccessAt })
@@ -632,8 +653,13 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
       if (!existing && !trend.current) continue;
       if (trend.current) result.trends++;
 
-      // Google'ın "ilgili haberleri" bazen alakasızdır: yalnızca başlığında terim geçenler kullanılır
-      trend.related = trend.related.filter((r) => titleMentionsTerm(r.title, trend.term));
+      // Google'ın "ilgili haberleri" + Google Haberler aramasında bulunanlar; bazen alakasızdır:
+      // yalnızca başlığında terim geçenler kullanılır
+      const seenUrls = new Set<string>();
+      trend.related = [...trend.related, ...(searchNews.get(trend.key) ?? [])]
+        .filter((r) => titleMentionsTerm(r.title, trend.term))
+        .filter((r) => !seenUrls.has(r.url) && seenUrls.add(r.url))
+        .slice(0, 15);
       const cluster = bestClusterForTrend(clusters, trend);
       if (cluster) claimedClusters.add(cluster);
       const newsItems = cluster?.items ?? [];

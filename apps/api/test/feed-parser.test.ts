@@ -44,7 +44,15 @@ describe("parseFeed — diğer biçimler", () => {
       title: "RDF biçiminde haber",
       url: "https://www.ornekhaber.com.tr/tr/rdf-haber/a-1",
       publishedAt: new Date("2026-10-05T06:00:00Z"),
+      source: null,
     });
+  });
+
+  it("RSS <source> öğesi (Google Haberler) kaynak adı olarak alınır", () => {
+    const xml = Buffer.from(
+      '<rss><channel><item><title>Başlık - Hürriyet</title><link>https://news.google.com/rss/articles/abc?oc=5</link><source url="https://www.hurriyet.com.tr">Hürriyet</source></item></channel></rss>',
+    );
+    expect(parseFeed(xml, "", NOW)[0]?.source).toBe("Hürriyet");
   });
 
   it("Atom: alternate bağlantı seçilir, kaçışlı HTML düz metne iner", () => {

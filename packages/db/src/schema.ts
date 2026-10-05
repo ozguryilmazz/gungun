@@ -348,6 +348,32 @@ export const topicItems = pgTable(
   ],
 );
 
+/**
+ * Google Haberler aramasında bir trend terimi için bulunan haberler (terim ↔ haber).
+ * Gündem üretimi bu bağlantılarla aramayı açıklar; haberin kendisi source_items'tadır.
+ */
+export const trendNewsLinks = pgTable(
+  "trend_news_links",
+  {
+    trendKey: varchar("trend_key", { length: 200 }).notNull(),
+    sourceItemId: bigint("source_item_id", { mode: "number" })
+      .notNull()
+      .references(() => sourceItems.id, { onDelete: "cascade" }),
+    foundAt: timestamptz("found_at").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.trendKey, t.sourceItemId] }),
+    index("trend_news_links_found_idx").on(t.foundAt.desc()),
+  ],
+);
+
+/** Her trend terimi en son ne zaman arandı (aynı terim sık sık aranmasın) */
+export const trendNewsSearches = pgTable("trend_news_searches", {
+  trendKey: varchar("trend_key", { length: 200 }).primaryKey(),
+  searchedAt: timestamptz("searched_at").notNull(),
+  resultCount: integer("result_count").notNull().default(0),
+});
+
 /** Gündem zaman çizelgesi. Yalnızca gerçek veriden (veya işaretli seed'den) üretilir. */
 export const timelineEvents = pgTable(
   "timeline_events",

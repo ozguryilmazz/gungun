@@ -35,6 +35,19 @@ export const DATA_PROVIDERS: readonly ProviderSeed[] = [
     },
   },
   {
+    // Google Haberler'in herkese açık arama RSS'i: trend aramaların nedenini açıklayan haberler.
+    // Yalnızca başlık, kaynak adı ve bağlantı; robots.txt her çalışmada denetlenir.
+    key: "google_news_search",
+    kind: "news",
+    name: "Google Haberler (trend açıklamaları)",
+    config: {
+      minIntervalMinutes: 15,
+      perTermMinutes: 60,
+      maxTermsPerRun: 25,
+      userAgent: BOT_USER_AGENT,
+    },
+  },
+  {
     // Resmi YouTube Data API v3; anahtar .env'deki YOUTUBE_API_KEY (yalnızca sunucuda)
     key: "youtube_trending",
     kind: "social",
