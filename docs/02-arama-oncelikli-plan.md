@@ -139,7 +139,7 @@ Sonraki aşamaların numaraları birer kayar: güvenlik sertleştirme 11, SEO 12
 - Ortak mantık `apps/api/src/ingest/news-search.ts`’te (başka bir arama kaynağı eklemek için yalnızca adres ve ayrıştırıcı gerekir):
   - Yalnızca başlık, kaynak adı ve bağlantı alınır; yalnızca başlığında terim geçen, son 48 saatin haberleri. Terim başına en fazla 10 haber.
   - **robots.txt** her çalışmada denetlenir (6 saat önbellek). İzin yoksa ya da okunamazsa hiç istek atılmaz.
-  - Aynı terim en fazla saatte bir aranır; istekler arasında 1 sn beklenir; 429 alınırsa o çalışma durur.
+  - Aynı terim en fazla saatte bir aranır; istekler arasında kaynağın istediği kadar beklenir; 429 alınırsa o çalışma durur.
   - Veritabanı: `trend_news_links` (terim ↔ haber) ve `trend_news_searches` (son arama zamanı), migration `0004_trend_news`.
 - **Pipeline:** Bulunan haberler Google’ın ilgili haberleriyle birlikte trend konusuna bağlanır; kart başlığı ve “Neden gündemde?” kaynakları bunlardan gelir.
 - **Değerlendirilip reddedilenler:** pytrends ve ücretli SERP servisleri (SerpApi vb.) Google’ı kazıyıp bot korumasını aştığı için kullanılmaz. Google Trends API (alpha) şimdilik beklemede.
