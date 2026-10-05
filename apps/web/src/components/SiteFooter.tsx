@@ -10,6 +10,10 @@ export function SiteFooter() {
         <p className={styles.note}>
           gündemci haber üretmez; kaynakları analiz eder ve orijinal habere bağlantı verir.
         </p>
+        <p className={styles.note}>
+          Veri kaynakları: Google Trends, YouTube, haber sitelerinin RSS akışları ve haber
+          eşleştirme için <a href="https://www.gdeltproject.org/">GDELT Project</a>.
+        </p>
         <nav aria-label="Alt menü" className={styles.links}>
           <Link href="/arsiv">Arşiv</Link>
           <Link href="/skor-nasil-hesaplanir">Skor nasıl hesaplanır?</Link>

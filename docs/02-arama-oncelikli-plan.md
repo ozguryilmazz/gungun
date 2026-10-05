@@ -131,10 +131,12 @@ Sonraki aşamaların numaraları birer kayar: güvenlik sertleştirme 11, SEO 12
 - **Arayüz:** Ana sayfada “YouTube’da Türkiye trendleri” (ilk 10) ve `/youtube` (ilk 50). Video sitede oynatılmaz; bağlantı YouTube’a gider. Kaynak olarak YouTube belirtilir.
 - **Sosyal sinyal (skorun %25’i):** Trend terimi YouTube trend videolarının başlığında geçiyorsa en iyi sıraya göre değer alır (1. sıra = 1,0; 50. sıra ≈ 0,3; her ek video +0,1, en fazla +0,2). Geçmiyorsa 0. YouTube listesi 2 saatten eskiyse “Veri bekleniyor”. Haber konularında sosyal sinyal ölçülmez.
 
-### Açıklaması olmayan aramalar ve Google Haberler araması
+### Açıklaması olmayan aramalar ve haber araması (GDELT)
 
 - **Sıralama:** Trend listesinde önce aramayı açıklayan en az bir haberi olan konular, sonra açıklaması bulunamayanlar gelir. Her grup kendi içinde skora göre sıralanır; skor değişmez. Kartta “açıklayan haber henüz bulunamadı” notu gösterilir.
-- **Sağlayıcı `google_news_search`:** Güncel her trend terimi için Google Haberler’in herkese açık arama RSS’inde (`news.google.com/rss/search`, son 1 gün, Türkçe) arama yapar.
+- **İlk deneme: Google Haberler (kaldırıldı).** `news.google.com/robots.txt` tüm botlara `Disallow: /` diyor; `/rss/search` izinli yollar arasında değil. Sağlayıcı robots.txt denetimi sayesinde hiç istek atmadı ve kaldırıldı (`RETIRED_PROVIDER_KEYS`, seed sırasında silinir).
+- **Sağlayıcı `gdelt_news`:** Güncel her trend terimi için GDELT DOC 2.0 API’sinde (`api.gdeltproject.org/api/v2/doc/doc`, `sourcelang:turkish`, son 1 gün) arama yapar. GDELT’in isteği üzerine istekler arasında 5,5 sn beklenir; tur başına en fazla 15 terim. Düz metin “limit requests” uyarısı 429 gibi ele alınır. Kaynak adı, alan adı yayıncı listemizdeyse yayıncı adıdır. Site altında GDELT kaynak olarak anılır.
+- Ortak mantık `apps/api/src/ingest/news-search.ts`’te (başka bir arama kaynağı eklemek için yalnızca adres ve ayrıştırıcı gerekir):
   - Yalnızca başlık, kaynak adı ve bağlantı alınır; yalnızca başlığında terim geçen, son 48 saatin haberleri. Terim başına en fazla 10 haber.
   - **robots.txt** her çalışmada denetlenir (6 saat önbellek). İzin yoksa ya da okunamazsa hiç istek atılmaz.
   - Aynı terim en fazla saatte bir aranır; istekler arasında 1 sn beklenir; 429 alınırsa o çalışma durur.
@@ -158,7 +160,7 @@ Kural tabanlı (`apps/api/src/topics-pipeline/term-filter.ts`), yapay zekâ yok:
 
 - Elenen aramalar silinmez (trend_signals’ta kalır). `pnpm trends:filter` son listedeki her aramanın kararını gösterir.
 - Filtreden önce açılmış konular gizlenir (`reasons` alanında “Filtre: …” işaretiyle). Filtre değişirse ya da tek kelimelik arama haberle açıklanırsa konu yeniden açılır; elle gizlenen konular açılmaz.
-- Elenen aramalar için Google Haberler’de arama yapılmaz.
+- Elenen aramalar için haber araması yapılmaz.
 - Liste 10. aşamada admin panelinden düzenlenebilir hâle gelecek.
 
 ### Kullanılabilirlik: mini grafik, kendiliğinden güncelleme, paylaşım

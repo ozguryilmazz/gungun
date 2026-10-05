@@ -13,7 +13,7 @@ import {
 } from "../schema.js";
 import { MOCK_TOPICS, computeScore } from "@gundemci/shared";
 import { MOCK_PROVIDER, MOCK_PUBLISHER } from "./mock-data.js";
-import { CATEGORIES, DATA_PROVIDERS, PUBLISHERS } from "./reference-data.js";
+import { CATEGORIES, DATA_PROVIDERS, PUBLISHERS, RETIRED_PROVIDER_KEYS } from "./reference-data.js";
 
 export interface SeedOptions {
   /** true: örnek veriler yeniden oluşturulur. false: mevcut örnek veriler silinir. */
@@ -56,6 +56,14 @@ export async function seedDatabase(db: Database, options: SeedOptions): Promise<
       .insert(dataProviders)
       .values(DATA_PROVIDERS.map((p) => ({ ...p, isEnabled: false })))
       .onConflictDoNothing({ target: dataProviders.key });
+    // Kaldırılan sağlayıcılar (kaynak kaydı bırakmadıysa) silinir; çalışma kayıtları CASCADE ile gider
+    for (const key of RETIRED_PROVIDER_KEYS) {
+      await tx.execute(sql`
+        delete from data_providers p
+        where p.key = ${key}
+          and not exists (select 1 from source_items si where si.provider_id = p.id)
+      `);
+    }
 
     await tx
       .insert(publishers)

@@ -1,5 +1,5 @@
 // Bir veri sağlayıcısını HEMEN, bir kez çalıştırır (kapalı olsa bile) ve kaynak bazında sonucu yazdırır.
-// Kullanım: pnpm fetch:once rss_news | google_trends | google_news_search | youtube_trending | all
+// Kullanım: pnpm fetch:once rss_news | google_trends | gdelt_news | youtube_trending | all
 import { createDb } from "@gundemci/db";
 import pino from "pino";
 import { loadConfig } from "../config.ts";

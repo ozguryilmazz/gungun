@@ -35,15 +35,16 @@ export const DATA_PROVIDERS: readonly ProviderSeed[] = [
     },
   },
   {
-    // Google Haberler'in herkese açık arama RSS'i: trend aramaların nedenini açıklayan haberler.
-    // Yalnızca başlık, kaynak adı ve bağlantı; robots.txt her çalışmada denetlenir.
-    key: "google_news_search",
+    // GDELT Project DOC API (herkese açık, ücretsiz): trend aramaların nedenini açıklayan Türkçe
+    // haberler. Yalnızca başlık, kaynak adı ve bağlantı; robots.txt her çalışmada denetlenir.
+    key: "gdelt_news",
     kind: "news",
-    name: "Google Haberler (trend açıklamaları)",
+    name: "GDELT (trend açıklamaları)",
     config: {
       minIntervalMinutes: 15,
       perTermMinutes: 60,
-      maxTermsPerRun: 25,
+      maxTermsPerRun: 15,
+      requestDelayMs: 5500,
       userAgent: BOT_USER_AGENT,
     },
   },
@@ -59,6 +60,12 @@ export const DATA_PROVIDERS: readonly ProviderSeed[] = [
     },
   },
 ];
+
+/**
+ * Kullanımdan kaldırılan sağlayıcılar: seed sırasında silinir (kaydı yoksa).
+ * google_news_search: news.google.com robots.txt'i /rss/search'e bot erişimine izin vermiyor.
+ */
+export const RETIRED_PROVIDER_KEYS: readonly string[] = ["google_news_search"];
 
 export interface PublisherSeed {
   name: string;

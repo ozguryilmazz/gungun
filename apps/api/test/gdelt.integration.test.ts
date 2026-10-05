@@ -1,4 +1,4 @@
-// Google Haberler araması: güncel trend terimleri → haberler → trend konusunu açıklar.
+// GDELT: güncel trend terimleri → haberler → trend konusunu açıklar.
 // Gerçek PostgreSQL, sahte ağ. Yalnızca TEST_DATABASE_URL tanımlıysa çalışır ve veritabanını SIFIRLAR.
 import {
   createDb,
@@ -28,39 +28,42 @@ const URL_ = process.env.TEST_DATABASE_URL;
 const silent = { info() {}, warn() {}, error() {} };
 const NOW = new Date("2026-10-05T09:00:00Z");
 
-function rss(items: { title: string; source: string; id: string }[]) {
-  return Buffer.from(
-    `<rss><channel>${items
-      .map(
-        (i) =>
-          `<item><title>${i.title} - ${i.source}</title><link>https://news.google.com/rss/articles/${i.id}?oc=5</link><pubDate>Mon, 05 Oct 2026 08:00:00 GMT</pubDate><source url="https://x.example">${i.source}</source></item>`,
-      )
-      .join("")}</channel></rss>`,
+const articles = (items: { title: string; domain: string; id: string }[]) =>
+  Buffer.from(
+    JSON.stringify({
+      articles: items.map((i) => ({
+        url: `https://www.${i.domain}/haber/${i.id}`,
+        title: i.title,
+        seendate: "20261005T080000Z",
+        domain: i.domain,
+      })),
+    }),
   );
-}
 
-function fakeFetcher(robots = "User-agent: *\nDisallow: /search\nAllow: /rss/search") {
+function fakeFetcher(robots: string | null = null) {
   const calls: string[] = [];
   const fn: Fetcher = async (url, policy) => {
     calls.push(url);
     const u = new URL(url);
     if (!policy.isHostAllowed(u.hostname)) throw new SafeFetchError("blocked_host", "izin dışı");
-    if (u.pathname === "/robots.txt")
+    if (u.pathname === "/robots.txt") {
+      if (robots === null) throw new SafeFetchError("http_error", "HTTP 404", 404);
       return { status: 200, finalUrl: url, contentType: "text/plain", body: Buffer.from(robots) };
-    const q = u.searchParams.get("q") ?? "";
+    }
+    const q = u.searchParams.get("query") ?? "";
     const body = q.startsWith("togg")
-      ? rss([
-          { title: "Togg'dan ekim ayına özel kampanya", source: "Hürriyet", id: "a1" },
-          { title: "Togg T6X teslimatları başladı", source: "NTV", id: "a2" },
-          { title: "E-ticarette yeni dönem", source: "Sabah", id: "a3" }, // terim yok → alınmaz
+      ? articles([
+          { title: "Togg'dan ekim ayına özel kampanya", domain: "hurriyet.com.tr", id: "a1" },
+          { title: "Togg T6X teslimatları başladı", domain: "ntv.com.tr", id: "a2" },
+          { title: "Elektrikli araç pazarı büyüyor", domain: "sabah.com.tr", id: "a3" }, // terim yok
         ])
-      : rss([]);
-    return { status: 200, finalUrl: url, contentType: "application/rss+xml", body };
+      : Buffer.from("{}");
+    return { status: 200, finalUrl: url, contentType: "application/json", body };
   };
   return { fn, calls };
 }
 
-describe.skipIf(!URL_)("Google Haberler araması entegrasyonu", () => {
+describe.skipIf(!URL_)("GDELT entegrasyonu", () => {
   let db: Database;
   let client: postgres.Sql;
   let close: () => Promise<void>;
@@ -84,15 +87,15 @@ describe.skipIf(!URL_)("Google Haberler araması entegrasyonu", () => {
     await seedDatabase(db, { includeMock: false, now: NOW });
     await db
       .update(dataProviders)
-      .set({ config: { requestDelayMs: 0, perTermMinutes: 60, maxTermsPerRun: 25 } })
-      .where(eq(dataProviders.key, "google_news_search"));
+      .set({ config: { requestDelayMs: 0, perTermMinutes: 60, maxTermsPerRun: 15 } })
+      .where(eq(dataProviders.key, "gdelt_news"));
     const [trends] = await db
       .update(dataProviders)
       .set({ lastSuccessAt: new Date(NOW.getTime() - 5 * 60_000) })
       .where(eq(dataProviders.key, "google_trends"))
       .returning({ id: dataProviders.id });
     await db.insert(trendSignals).values(
-      ["togg", "trendyol", "sözcü", "deprem", "adana deprem"].map((term, i) => ({
+      ["togg", "trendyol", "sözcü", "deprem", "adana deprem", "f1"].map((term, i) => ({
         providerId: trends!.id,
         term,
         geo: "TR",
@@ -108,28 +111,42 @@ describe.skipIf(!URL_)("Google Haberler araması entegrasyonu", () => {
     await close?.();
   });
 
+  it("seed: GDELT sağlayıcısı kapalı başlar; kaldırılan Google Haberler sağlayıcısı yok", async () => {
+    // Eski kurulumda kalan kayıt yeniden seed ile silinir
+    await db
+      .insert(dataProviders)
+      .values({ key: "google_news_search", kind: "news", name: "Google Haberler", config: {} });
+    await seedDatabase(db, { includeMock: false, now: NOW });
+    const keys = (await db.select({ key: dataProviders.key }).from(dataProviders)).map(
+      (p) => p.key,
+    );
+    expect(keys).toContain("gdelt_news");
+    expect(keys).not.toContain("google_news_search");
+  });
+
   it("robots.txt izin vermiyorsa hiçbir arama yapılmaz", async () => {
-    const f = fakeFetcher("User-agent: *\nDisallow: /");
-    const r = await runProvider(deps(f.fn), "google_news_search", { force: true });
-    expect(r.status).toBe("failed");
+    const f = fakeFetcher("User-agent: *\nDisallow: /api/");
+    const r = await runProvider(deps(f.fn), "gdelt_news", { force: true });
     expect(r.errorCode).toBe("robots_disallowed");
     expect(f.calls.every((c) => c.endsWith("/robots.txt"))).toBe(true);
   });
 
-  it("güncel trend terimleri aranır (elenen aramalar hariç); yalnızca başlığında terim geçen haberler alınır", async () => {
-    const f = fakeFetcher();
-    const r = await runProvider(deps(f.fn), "google_news_search", { force: true });
+  it("güncel terimler aranır (elenenler ve çok kısa olanlar hariç); yalnızca başlığında terim geçenler", async () => {
+    const f = fakeFetcher(); // robots.txt yok (404) → izinli
+    const r = await runProvider(deps(f.fn), "gdelt_news", { force: true });
     expect(r.status).toBe("success");
-    const searchedTerms = f.calls
-      .filter((c) => c.includes("/rss/search"))
-      .map((c) => new URL(c).searchParams.get("q"));
-    expect(searchedTerms.sort()).toEqual([
-      '"adana deprem" when:1d',
-      "deprem when:1d",
-      "togg when:1d",
+    const queries = f.calls
+      .filter((c) => c.includes("/api/v2/doc/doc"))
+      .map((c) => new URL(c).searchParams.get("query"))
+      .sort();
+    expect(queries).toEqual([
+      '"adana deprem" sourcelang:turkish',
+      "deprem sourcelang:turkish",
+      "togg sourcelang:turkish",
     ]);
-    const links = await db.select().from(trendNewsLinks).where(eq(trendNewsLinks.trendKey, "togg"));
-    expect(links).toHaveLength(2);
+    expect(
+      await db.select().from(trendNewsLinks).where(eq(trendNewsLinks.trendKey, "togg")),
+    ).toHaveLength(2);
     const [s] = await db
       .select()
       .from(trendNewsSearches)
@@ -139,20 +156,19 @@ describe.skipIf(!URL_)("Google Haberler araması entegrasyonu", () => {
 
   it("aynı terim bir saat dolmadan tekrar aranmaz", async () => {
     const f = fakeFetcher();
-    await runProvider(deps(f.fn, new Date(NOW.getTime() + 20 * 60_000)), "google_news_search", {
+    await runProvider(deps(f.fn, new Date(NOW.getTime() + 20 * 60_000)), "gdelt_news", {
       force: true,
     });
-    expect(f.calls.filter((c) => c.includes("/rss/search"))).toHaveLength(0);
+    expect(f.calls.filter((c) => c.includes("/api/v2/doc/doc"))).toHaveLength(0);
   });
 
-  it("bulunan haberler trend konusunu açıklar; açıklanamayan tek kelime gösterilmez", async () => {
+  it("bulunan haberler trend konusunu açıklar; kart başlığında bilinen yayıncı adı", async () => {
     await buildTopics({ db, client, log: silent, now: () => NOW });
     const [togg] = await db.select().from(topics).where(eq(topics.title, "Togg"));
     expect(togg).toBeDefined();
     expect(await db.select().from(topicItems).where(eq(topicItems.topicId, togg!.id))).toHaveLength(
       2,
     );
-
     const app = await buildApp({
       repo: createTopicRepository(db),
       cacheTtlSeconds: 0,
@@ -160,11 +176,8 @@ describe.skipIf(!URL_)("Google Haberler araması entegrasyonu", () => {
       logLevel: "silent",
     });
     const list = TopicListResponseSchema.parse((await app.inject("/api/v1/topics")).json());
-    // "deprem" tek kelime ve haberi yok → gösterilmez; "adana deprem" haberi olmasa da gösterilir
-    // ama açıklanan "Togg"un altında sıralanır
     expect(list.items.map((t) => t.title)).toEqual(["Togg", "Adana Deprem"]);
     expect(list.items[0]?.headline?.source).toMatch(/Hürriyet|NTV/);
-    expect(list.items[0]?.headline?.title).not.toContain(" - ");
     await app.close();
   });
 });
