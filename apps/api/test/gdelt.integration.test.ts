@@ -208,5 +208,7 @@ describe.skipIf(!URL_)("GDELT entegrasyonu", () => {
     expect(r.status).toBe("partial");
     expect(r.details.map((d) => d.ok)).toEqual([true, false]);
     expect(searches).toBe(4); // 1+1 (başarılı) + 2 (vazgeçildi), kalan terim aranmadı
+    // "togg" artık haberle açıklandığı için hiç aranmadı
+    expect(calls.some((c) => c.includes("togg"))).toBe(false);
   });
 });

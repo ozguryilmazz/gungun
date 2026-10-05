@@ -9,11 +9,13 @@
 import {
   dataProviders,
   sourceItems,
+  topicItems,
+  topics,
   trendNewsLinks,
   trendNewsSearches,
   type FetchRunDetail,
 } from "@gundemci/db";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { checkRobots } from "../lib/robots.ts";
 import { SafeFetchError } from "../lib/safe-http.ts";
 import { titleMentionsTerm, trendKey } from "../topics-pipeline/pipeline.ts";
@@ -116,6 +118,22 @@ export async function runTrendNewsSearch(
     if (opts.skipTerm?.(r.term)) continue;
     candidates.set(key, { term: r.term.trim(), traffic: Number(r.traffic ?? 0) });
   }
+  // Zaten bir haberle açıklanmış aramalar (RSS kümesi, Google'ın ilgili haberleri…) aranmaz:
+  // kaynağa yalnızca açıklaması eksik aramalar için istek gider
+  if (candidates.size > 0) {
+    const explained = await db
+      .selectDistinct({ key: topics.trendKey })
+      .from(topics)
+      .innerJoin(topicItems, eq(topicItems.topicId, topics.id))
+      .where(
+        and(
+          eq(topics.kind, "trend"),
+          eq(topics.isMock, false),
+          inArray(topics.trendKey, [...candidates.keys()]),
+        ),
+      );
+    for (const r of explained) if (r.key) candidates.delete(r.key);
+  }
   if (candidates.size === 0) return { status: "success", itemsFetched: 0, details: [] };
 
   // Yakın zamanda aranmış terimler atlanır; hiç aranmamış olanlar önce, sonra en eski aranan
@@ -168,7 +186,8 @@ export async function runTrendNewsSearch(
     // İlk aramadan önce de beklenir: robots.txt isteği de kaynağın sınırına sayılabilir
     if (delayMs > 0) await sleep(delayMs);
     try {
-      const items = (await searchWithRetry(term))
+      const raw = await searchWithRetry(term);
+      const items = raw
         // Yalnızca başlığında terim geçen ve güncel olan haberler aramayı açıklayabilir
         .filter((it) => titleMentionsTerm(it.title, term))
         .filter((it) => !it.publishedAt || it.publishedAt >= oldest)
@@ -217,7 +236,13 @@ export async function runTrendNewsSearch(
           set: { searchedAt: now, resultCount: items.length },
         });
       inserted += added;
-      details.push({ name: term.slice(0, 60), ok: true, items: added, parsed: items.length });
+      details.push({
+        name: term.slice(0, 60),
+        ok: true,
+        items: added,
+        parsed: raw.length,
+        matched: items.length,
+      });
     } catch (error) {
       failures++;
       const { code, message } = describeError(error);

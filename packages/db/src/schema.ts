@@ -154,6 +154,8 @@ export interface FetchRunDetail {
   offDomain?: number;
   /** Örnek atlanan alan adları (teşhis için, en fazla 3) */
   offDomainHosts?: string[];
+  /** Arama kaynaklarında: gelen haberlerden başlığında terim geçen ve güncel olan (saklanan) */
+  matched?: number;
   error?: string;
 }
 
