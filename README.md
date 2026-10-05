@@ -4,7 +4,8 @@ Türkiye'de internette **ne konuşuluyor, neden gündemde ve ne kadar hızlı y�
 
 > Durum: **Aşama 8 — gerçek gündem.** Haberler toplanıyor, konulara gruplanıyor, skorlanıyor ve
 > sitede gösteriliyor. Örnek konuları kaldırmak için `.env` içinde `USE_MOCK_DATA=false` yapıp `pnpm db:seed` çalıştırın.
-> Mimari ve MVP planı: [`docs/01-mimari-plan.md`](docs/01-mimari-plan.md)
+> Mimari ve MVP planı: [`docs/01-mimari-plan.md`](docs/01-mimari-plan.md) ·
+> Arama öncelikli yapı (v0.2, onay bekliyor): [`docs/02-arama-oncelikli-plan.md`](docs/02-arama-oncelikli-plan.md)
 
 ## Gereksinimler
 

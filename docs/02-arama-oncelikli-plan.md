@@ -1,0 +1,105 @@
+# gundemci.org — Arama Öncelikli Yapı Planı (v0.2, onay bekliyor)
+
+> Tarih: 2026-10-05 · Bu belge `01-mimari-plan.md`’deki ürün mantığını değiştirir; altyapı (veri toplama,
+> güvenlik, API, arayüz, arşiv) aynen kalır.
+
+## 1. Neden değişiyor?
+
+|                 | Şu anki yapı (v0.1)             | Yeni yapı (v0.2)                                                 |
+| --------------- | ------------------------------- | ---------------------------------------------------------------- |
+| Soru            | Haber sitelerinde ne yazılıyor? | **İnsanlar şu an ne arıyor ve ne konuşuyor?**                    |
+| Ana kaynak      | Haber RSS’leri                  | **Google Trends** (Türkiye arama trendleri)                      |
+| Haberlerin rolü | Konuyu oluşturur                | **Konuyu açıklar** (“Neden gündemde?” + kaynaklar)               |
+| Sosyal sinyal   | Yok                             | **YouTube Türkiye trendleri** (+ ileride X, koşullu Ekşi Sözlük) |
+
+## 2. Veri kaynakları ve rolleri
+
+| Kaynak                               | Rol                                                                         | Erişim                                                                                      | Güncellik                                                   | Durum                          |
+| ------------------------------------ | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------ |
+| **Google Trends TR**                 | **Ana sinyal:** her trend arama bir gündem konusudur                        | Herkese açık trend RSS (resmi)                                                              | Google tarafında yaklaşık saatlik; biz 10 dk’da bir bakarız | Var (aşama 7)                  |
+| **YouTube Türkiye trendleri**        | Ayrı bölüm + sosyal sinyal                                                  | Resmi YouTube Data API v3 (`chart=mostPopular`, `regionCode=TR`), **ücretsiz API anahtarı** | 15–30 dk                                                    | **Yeni**                       |
+| **Haber RSS (12 site)**              | Açıklama: trend aramayla eşleşen haberler                                   | Resmi RSS                                                                                   | 10–15 dk                                                    | Var                            |
+| **Trends “ilgili haberler”**         | Açıklama: Google’ın trend terimle ilişkilendirdiği haberler (kaynak adıyla) | Trends RSS içinde                                                                           | Trends ile aynı                                             | Var, şu an yalnızca saklanıyor |
+| **Türkçe Vikipedi en çok okunanlar** | Destek sinyali: “neyi merak ediyoruz?”                                      | Resmi Wikimedia API, anahtarsız                                                             | **Günlük** (bir önceki gün) — anlık değil                   | İsteğe bağlı                   |
+| **Ekşi Sözlük “gündem” başlıkları**  | Sosyal sinyal (yalnızca başlık + entry sayısı, bağlantı)                    | API yok — **yalnızca kullanım koşulları ve robots.txt izin veriyorsa**                      | 15 dk                                                       | **Koşullu** (bkz. §6)          |
+| **X (Twitter)**                      | Sosyal sinyal                                                               | Resmi API, **ücretli**                                                                      | Paket bağlı                                                 | Bütçe kararıyla, ileride       |
+
+“Anlık” konusunda dürüstlük: Google Trends RSS’i gerçek zamanlı değil, yaklaşık saatlik güncellenir. Arayüzde
+her konu için “son güncelleme” zamanı gösterilir; “canlı” ifadesi kullanılmaz.
+
+## 3. Yeni konu modeli
+
+1. **Trend konu:** Google Trends’teki her terim bir konudur (ör. “galatasaray”, “deprem”).
+   - Başlık: terimin kendisi (ör. “Galatasaray”); altında, eşleşen en güncel haber başlığı **kaynak adıyla**
+     (“Hürriyet: …”) gösterilir. Kendi cümlemizi yazmayız.
+   - “Neden gündemde?”: ölçülen bilgiler + eşleşen haberler + Google’ın ilgili haberleri.
+2. **Haber konusu (ikincil):** Arama trendinde olmayan ama ≥ 4 yayıncıda geçen olaylar ayrı bir bölümde
+   (“Haberlerde öne çıkanlar”) gösterilir; ana listeye karışmaz.
+3. **Eşleştirme:** Trend terim ↔ haber kümesi eşleşmesi aşama 8’deki kurallarla (medya adları hariç, tek
+   kelimede iyelik eki yok) yapılır. Eşleşen haber kümesi trend konusuna bağlanır.
+4. **Yaşam döngüsü:** Terim Trends listesinde olduğu sürece “yayında”; listeden çıkınca “soğuyan”
+   (3 saat), sonra arşiv.
+
+## 4. Yeni skor (ağırlıklar)
+
+| Bileşen           | Ağırlık  | Ölçüm                                                             |
+| ----------------- | -------- | ----------------------------------------------------------------- |
+| Arama ilgisi      | **0,50** | Trends yaklaşık trafiği (log ölçek) + listede kalma süresi        |
+| Sosyal sinyal     | **0,25** | YouTube trendinde eşleşen video (sıra, izlenme); ileride X / Ekşi |
+| Haber görünürlüğü | 0,15     | Eşleşen haberlerin farklı yayıncı sayısı                          |
+| Yükselme hızı     | 0,10     | Trafik / sıra değişimi (son 3 saat)                               |
+
+Verisi olmayan bileşen yine skora katılmaz ve “Veri bekleniyor” gösterilir (değişmeyen ilke).
+
+## 5. YouTube bölümü
+
+- **Ana sayfada** “YouTube’da Türkiye trendleri” bölümü (ilk 10), ayrıca `/youtube` sayfası (ilk 50).
+- **Gösterilenler:** sıra, video başlığı, kanal adı, izlenme sayısı, yayın zamanı, küçük resim ve
+  YouTube’daki videoya bağlantı. Video sitemizde oynatılmaz; tıklayınca YouTube’a gidilir.
+- **YouTube API Hizmet Şartları:** Başlık ve kanal adı değiştirilmeden gösterilir, YouTube kaynak olarak
+  belirtilir, veriler en geç birkaç saatte bir yenilenir (şartlar en fazla 30 gün tutulmasına izin verir).
+- **Güvenlik:**
+  - API anahtarı yalnızca sunucuda (`.env` → `YOUTUBE_API_KEY`), tarayıcıya gitmez.
+  - Anahtar adres içinde gittiği için hiçbir log satırına adres yazılmaz.
+  - Küçük resimler için CSP’ye yalnızca `i.ytimg.com` eklenir.
+- **Kota:** Ücretsiz günlük kota 10.000 birim; bir liste çağrısı 1 birim. 15 dk’da bir çağrı günde ~100 birim eder, kota rahat yeter.
+
+## 6. Ekşi Sözlük (koşullu)
+
+Ekşi Sözlük’ün herkese açık API’si yok; “gündem” sayfası okunabilir ama:
+
+1. **Kullanım koşulları:** Otomatik veri toplamayı yasaklıyorsa bu kaynak **eklenmez**
+   (“izinsiz kopyalama yok” ilkesi). Bunu kullanıcı siteden okuyup karar verir; gerekirse Ekşi’den
+   yazılı izin istenir.
+2. **robots.txt:** Sağlayıcı her çalışmada `robots.txt`’i okur; gündem sayfası botlara kapalıysa
+   **çalışmaz** ve durumu “izin yok” olarak gösterir.
+3. **Bot koruması:** Site tarayıcı dışı istekleri engelliyorsa bu engel **aşılmaya çalışılmaz**
+   (tarayıcı taklidi, korumayı atlatma yok).
+4. İzin varsa yalnızca **başlık + entry sayısı + bağlantı** alınır; entry metinleri alınmaz.
+
+## 7. X (ileride)
+
+Mimari hazır: `SocialProvider` olarak eklenir. Bütçe kararı verildiğinde güncel fiyat ve paket
+özellikleri (trend verisi hangi pakette?) birlikte incelenir.
+
+## 8. Değişecek / kalacak parçalar
+
+- **Kalır:** veri toplama altyapısı, SSRF koruması, haber RSS, API katmanı, arayüz tasarımı, arşiv, testler.
+- **Değişir:** konu oluşturma (trend öncelikli), skor ağırlıkları, ana sayfa bölümleri (Trend gündem →
+  YouTube → Haberlerde öne çıkanlar), konu detayındaki açıklama bölümü.
+- **Veritabanı:**
+  - `topics.kind` (`trend` / `news`) eklenir.
+  - `youtube_videos` tablosu eklenir: sıra geçmişi ile video, kanal, izlenme.
+  - `source_items.source_name` eklenir: Google’ın ilgili haberleri bizim yayıncı listemizde olmayan sitelerden gelebilir.
+
+## 9. Uygulama sırası (her adım onaylı)
+
+| #   | Adım                                     | Çıktı                                                    |
+| --- | ---------------------------------------- | -------------------------------------------------------- |
+| 9.1 | Trend öncelikli konu modeli + yeni skor  | Ana liste Google Trends terimlerinden; haberler açıklama |
+| 9.2 | YouTube sağlayıcısı + bölüm              | Ana sayfa bölümü, `/youtube`, sosyal sinyal              |
+| 9.3 | (İsteğe bağlı) Vikipedi en çok okunanlar | Günlük destek sinyali                                    |
+| 9.4 | (Koşullu) Ekşi Sözlük                    | Yalnızca izin varsa                                      |
+| 10  | Admin paneli                             | (eski aşama 9)                                           |
+
+Sonraki aşamaların numaraları birer kayar: güvenlik sertleştirme 11, SEO 12, performans 13, AI 14, canlıya geçiş 15.
