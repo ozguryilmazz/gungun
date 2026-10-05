@@ -1,0 +1,31 @@
+{
+  "name": "gundemci",
+  "version": "0.0.0",
+  "private": true,
+  "description": "gundemci.org — Türkiye internet gündemi analiz platformu",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "db:up": "docker compose --env-file .env -f infra/docker-compose.yml up -d",
+    "db:down": "docker compose --env-file .env -f infra/docker-compose.yml down",
+    "db:logs": "docker compose --env-file .env -f infra/docker-compose.yml logs -f postgres"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@gundemci/config": "workspace:*",
+    "eslint": "10.12.0",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.13.0",
+    "prettier": "3.9.9",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.71.0"
+  }
+}
