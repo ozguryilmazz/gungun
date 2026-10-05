@@ -28,7 +28,8 @@
     "db:seed": "pnpm --filter @gundemci/db seed",
     "worker": "pnpm --filter @gundemci/api worker",
     "fetch:once": "pnpm --filter @gundemci/api fetch:once",
-    "providers": "pnpm --filter @gundemci/api providers"
+    "providers": "pnpm --filter @gundemci/api providers",
+    "feed:inspect": "pnpm --filter @gundemci/api feed:inspect"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
