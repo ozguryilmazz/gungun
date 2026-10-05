@@ -1,6 +1,6 @@
 # gundemci.org — Mimari ve MVP Planı (v0.1, taslak)
 
-> Durum: **Plan onaylandı (2026-10-05).** Kararlar en alttaki “Alınan kararlar” bölümünde. Aşama 1 (repo iskeleti) tamamlandı.
+> Durum: **Plan onaylandı (2026-10-05).** Kararlar en alttaki “Alınan kararlar” bölümünde. Aşama 1 (repo iskeleti) ve aşama 2 (veritabanı) tamamlandı.
 > Tarih: 2026-10-05
 
 ---
@@ -178,6 +178,15 @@ admin_users ──< audit_logs
 | **admin_sessions**  | id, user_id, token_hash, expires_at, created_at, ip_hash                                                                                                                                                                              | Ham token DB’de tutulmaz                                                        |
 | **audit_logs**      | id, admin_user_id, action, entity_type, entity_id, diff (jsonb), created_at                                                                                                                                                           | Admin her yazma işlemi                                                          |
 
+**Aşama 2’de plana göre yapılan netleştirmeler:**
+
+- `topic_slug_redirects` tablosu: eski slug → konu (301 yönlendirme için; `previous_slugs` alanı yerine).
+- RSS adresi `publishers.feed_url` alanında; aktif yayıncıların feed adresleri SSRF allowlist’idir.
+- `provider_kind` enum’una `manual` eklendi (admin girişi ve seed verisi için).
+- `publishers`, `source_items`, `timeline_events` tablolarına da `is_mock` eklendi; örnek veri her katmanda ayırt edilebilir.
+- Snapshot bileşenlerinde verisi olmayan sinyal `available=false`; hiç sinyal yoksa `score = null`.
+- Kısıtlar veritabanı seviyesinde: slug formatı, skor 0–100, yalnızca `https` feed, yalnızca `http(s)` kaynak linki, büyük/küçük harf duyarsız benzersiz admin e-postası.
+
 Veri saklama: `source_items` ve `topic_snapshots` için ileride bölümleme (aylık partition) ve eski snapshot’ların günlük özete sıkıştırılması.
 
 ---
@@ -343,7 +352,7 @@ Admin ID’leri UUID; tüm sorgular sahiplik/rol kontrolünden geçer (IDOR önl
 | --- | ------------------------- | --------------------------------------------------------------------------------------------------------- | ----------- |
 | 0   | **Bu belge**              | Mimari plan                                                                                               | ✅          |
 | 1   | Repo iskeleti             | pnpm workspace, tsconfig/eslint/prettier, `.gitignore`, `.env.example`, README, docker-compose (Postgres) | ✅          |
-| 2   | Veritabanı                | Drizzle şema + migration + **işaretli** seed verisi                                                       | ✋          |
+| 2   | Veritabanı                | Drizzle şema + migration + **işaretli** seed verisi                                                       | ✅          |
 | 3   | UI wireframe → tasarım    | Wordmark alternatifleri, renk/tipografi token’ları, kart bileşeni prototipi                               | ✋          |
 | 4   | İlk çalışan frontend      | Ana sayfa + detay + kategori (seed veriden, “ÖRNEK VERİ” şeridiyle)                                       | ✋          |
 | 5   | Backend API               | Public endpoint’ler, validation, hata yönetimi, cache, rate limit, testler                                | ✋          |

@@ -2,7 +2,7 @@
 
 Türkiye'de internette **ne konuşuluyor, neden gündemde ve ne kadar hızlı yükseliyor** sorusuna yanıt veren gündem analiz platformu.
 
-> Durum: **Aşama 1 — repo iskeleti.** Henüz uygulama kodu yok.
+> Durum: **Aşama 2 — veritabanı.** Şema, migration ve işaretli örnek veri hazır; arayüz henüz yok.
 > Mimari ve MVP planı: [`docs/01-mimari-plan.md`](docs/01-mimari-plan.md)
 
 ## Gereksinimler
@@ -26,7 +26,16 @@ copy .env.example .env
 
 # PostgreSQL'i başlat (yalnızca 127.0.0.1:5432 üzerinden erişilebilir)
 pnpm db:up
+
+# Tabloları oluştur ve başlangıç verisini yükle
+pnpm db:migrate
+pnpm db:seed
 ```
+
+> ⚠ `USE_MOCK_DATA=true` iken `db:seed` **örnek** konular yükler. Bunlar gerçek değildir:
+> başlıkları "Örnek:" ile başlar, veritabanında `is_mock=true` işaretlidir ve kaynak
+> bağlantıları `example.org`'a gider. `USE_MOCK_DATA=false` yapıp `db:seed` çalıştırmak
+> örnek verileri siler.
 
 ## Komutlar
 
@@ -43,7 +52,7 @@ pnpm db:up
 
 ```
 apps/       web (Next.js) ve api (Fastify) — sonraki aşamalarda
-packages/   config (ortak TS ayarları); db ve shared sonraki aşamalarda
+packages/   config (ortak TS ayarları), db (şema, migration, seed); shared sonraki aşamalarda
 infra/      lokal docker-compose
 docs/       mimari ve kararlar
 ```

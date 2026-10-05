@@ -16,7 +16,10 @@
     "test": "pnpm -r --if-present test",
     "db:up": "docker compose --env-file .env -f infra/docker-compose.yml up -d",
     "db:down": "docker compose --env-file .env -f infra/docker-compose.yml down",
-    "db:logs": "docker compose --env-file .env -f infra/docker-compose.yml logs -f postgres"
+    "db:logs": "docker compose --env-file .env -f infra/docker-compose.yml logs -f postgres",
+    "db:generate": "pnpm --filter @gundemci/db generate",
+    "db:migrate": "pnpm --filter @gundemci/db migrate",
+    "db:seed": "pnpm --filter @gundemci/db seed"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
