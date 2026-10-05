@@ -24,6 +24,7 @@ export interface TopicRow {
 }
 
 export interface TopicDetailRow extends TopicRow {
+  isArchived: boolean;
   reasons: string[];
   summaryOrigin: "none" | "manual" | "ai";
   components: ScoreComponents;
@@ -42,15 +43,34 @@ export interface ProviderRow {
   consecutiveFailures: number;
 }
 
+export interface ArchiveRow {
+  slug: string;
+  title: string;
+  categorySlug: string;
+  categoryName: string;
+  peakScore: number | null;
+  firstSeenAt: Date;
+  sourceCount: number;
+  isMock: boolean;
+}
+
 export interface TopicRepository {
   listVisibleTopics(windowMinutes: number): Promise<TopicRow[]>;
   getTopicDetail(slug: string, windowMinutes: number): Promise<TopicDetailRow | null>;
   getTopicHistory(slug: string, since: Date): Promise<SnapshotRef[] | null>;
   listProviders(): Promise<ProviderRow[]>;
+  /** [start, end) aralığında skor kaydı olan, yayına girmiş konular — en yüksek skora göre */
+  archiveDay(start: Date, end: Date): Promise<ArchiveRow[]>;
+  /** Arşivde konusu olan son günler (İstanbul saatine göre) */
+  archiveDays(limit: number): Promise<{ date: string; topicCount: number }[]>;
   ping(): Promise<void>;
 }
 
 const VISIBLE_STATUSES = sql`('published', 'cooling')`;
+/** Detay sayfası arşivlenmiş konular için de açılır (arşiv bağlantıları kırılmasın) */
+const DETAIL_STATUSES = sql`('published', 'cooling', 'archived')`;
+/** Arşive yalnızca bir kez yayına girmiş (veya örnek) konular girer; gizlenenler asla */
+const ARCHIVE_FILTER = sql`t.status <> 'hidden' and (t.published_at is not null or t.is_mock = true)`;
 const MAX_TOPICS = 500;
 const MAX_SOURCES = 50;
 
@@ -74,6 +94,7 @@ type RawTopic = {
   source_count: number;
   reasons?: string[];
   summary_origin?: "none" | "manual" | "ai";
+  status?: string;
 };
 
 const asDate = (v: Date | string) => (v instanceof Date ? v : new Date(v));
@@ -106,7 +127,7 @@ function mapTopic(r: RawTopic): TopicRow {
 function topicSelect(windowMinutes: number) {
   return sql`
     select t.id, t.slug, t.title, t.summary, t.is_mock, t.updated_at, t.first_seen_at,
-           t.reasons, t.summary_origin,
+           t.reasons, t.summary_origin, t.status,
            c.slug as category_slug, c.name as category_name,
            l.captured_at as latest_at, l.score as latest_score,
            l.signals_available, l.signals_total, l.components as latest_components,
@@ -146,7 +167,7 @@ export function createTopicRepository(db: Database): TopicRepository {
     async getTopicDetail(slug, windowMinutes) {
       const rows = await db.execute<RawTopic>(sql`
         ${topicSelect(windowMinutes)}
-        where t.slug = ${slug} and t.status in ${VISIBLE_STATUSES}
+        where t.slug = ${slug} and t.status in ${DETAIL_STATUSES}
         limit 1
       `);
       const raw = rows[0];
@@ -177,6 +198,7 @@ export function createTopicRepository(db: Database): TopicRepository {
 
       return {
         ...mapTopic(raw),
+        isArchived: raw.status === "archived",
         reasons: Array.isArray(raw.reasons) ? raw.reasons : [],
         summaryOrigin: raw.summary_origin ?? "none",
         components: raw.latest_components ?? {},
@@ -192,7 +214,7 @@ export function createTopicRepository(db: Database): TopicRepository {
 
     async getTopicHistory(slug, since) {
       const topic = await db.execute<{ id: string }>(sql`
-        select id from topics where slug = ${slug} and status in ${VISIBLE_STATUSES} limit 1
+        select id from topics where slug = ${slug} and status in ${DETAIL_STATUSES} limit 1
       `);
       const id = topic[0]?.id;
       if (!id) return null;
@@ -230,6 +252,55 @@ export function createTopicRepository(db: Database): TopicRepository {
         lastErrorAt: r.last_error_at === null ? null : asDate(r.last_error_at),
         consecutiveFailures: r.consecutive_failures,
       }));
+    },
+
+    async archiveDay(start, end) {
+      const rows = await db.execute<{
+        slug: string;
+        title: string;
+        category_slug: string;
+        category_name: string;
+        peak: number | null;
+        first_seen_at: Date;
+        source_count: number;
+        is_mock: boolean;
+      }>(sql`
+        select t.slug, t.title, c.slug as category_slug, c.name as category_name,
+               max(s.score) as peak, t.first_seen_at, t.is_mock,
+               (select count(*)::int from topic_items ti where ti.topic_id = t.id) as source_count
+        from topic_snapshots s
+        join topics t on t.id = s.topic_id
+        join categories c on c.id = t.category_id
+        where s.captured_at >= ${start.toISOString()} and s.captured_at < ${end.toISOString()}
+          and ${ARCHIVE_FILTER}
+        group by t.id, c.slug, c.name
+        order by peak desc nulls last, t.first_seen_at asc
+        limit 50
+      `);
+      return rows.map((r) => ({
+        slug: r.slug,
+        title: r.title,
+        categorySlug: r.category_slug,
+        categoryName: r.category_name,
+        peakScore: r.peak,
+        firstSeenAt: asDate(r.first_seen_at),
+        sourceCount: Number(r.source_count),
+        isMock: r.is_mock,
+      }));
+    },
+
+    async archiveDays(limit) {
+      const rows = await db.execute<{ day: string; n: number }>(sql`
+        select to_char((s.captured_at at time zone 'Europe/Istanbul')::date, 'YYYY-MM-DD') as day,
+               count(distinct s.topic_id)::int as n
+        from topic_snapshots s
+        join topics t on t.id = s.topic_id
+        where ${ARCHIVE_FILTER}
+        group by day
+        order by day desc
+        limit ${limit}
+      `);
+      return rows.map((r) => ({ date: r.day, topicCount: Number(r.n) }));
     },
 
     async ping() {

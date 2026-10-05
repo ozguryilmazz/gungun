@@ -12,7 +12,8 @@ export function SiteHeader() {
         <nav aria-label="Ana menü" className={styles.nav}>
           <Link href="/">Gündem</Link>
           <Link href="/#yukselenler">Yükselenler</Link>
-          <Link href="/skor-nasil-hesaplanir">Skor nasıl hesaplanır?</Link>
+          <Link href="/arsiv">Arşiv</Link>
+          <Link href="/skor-nasil-hesaplanir">Skor nedir?</Link>
         </nav>
       </div>
     </header>

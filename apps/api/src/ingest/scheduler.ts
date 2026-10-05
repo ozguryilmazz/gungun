@@ -16,8 +16,8 @@ async function lastStartedAt(db: Database, providerId: number): Promise<Date | n
   return row?.startedAt ?? null;
 }
 
-/** Zamanı gelmiş, açık sağlayıcıları sırayla çalıştırır */
-export async function tick(deps: RunnerDeps): Promise<void> {
+/** Zamanı gelmiş, açık sağlayıcıları sırayla çalıştırır; yeni kayıt sayısını döndürür */
+export async function tick(deps: RunnerDeps): Promise<number> {
   const now = deps.now?.() ?? new Date();
   const providers = await deps.db
     .select({
@@ -29,6 +29,7 @@ export async function tick(deps: RunnerDeps): Promise<void> {
     .from(dataProviders)
     .where(eq(dataProviders.isEnabled, true));
 
+  let newItems = 0;
   for (const p of providers) {
     if (!PROVIDERS[p.key]) continue;
     const configured =
@@ -43,6 +44,7 @@ export async function tick(deps: RunnerDeps): Promise<void> {
     if (last && now.getTime() - last.getTime() < delay * 60_000) continue;
 
     const result = await runProvider(deps, p.key);
+    newItems += result.itemsFetched;
     deps.log.info(
       {
         provider: p.key,
@@ -53,4 +55,5 @@ export async function tick(deps: RunnerDeps): Promise<void> {
       "veri çekme tamamlandı",
     );
   }
+  return newItems;
 }

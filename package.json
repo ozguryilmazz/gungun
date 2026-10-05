@@ -29,7 +29,8 @@
     "worker": "pnpm --filter @gundemci/api worker",
     "fetch:once": "pnpm --filter @gundemci/api fetch:once",
     "providers": "pnpm --filter @gundemci/api providers",
-    "feed:inspect": "pnpm --filter @gundemci/api feed:inspect"
+    "feed:inspect": "pnpm --filter @gundemci/api feed:inspect",
+    "topics:build": "pnpm --filter @gundemci/api topics:build"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

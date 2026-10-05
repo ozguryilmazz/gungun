@@ -3,6 +3,7 @@ import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import Fastify, { type FastifyInstance } from "fastify";
 import { errorBody, sendError } from "./lib/errors.ts";
+import { archiveRoutes } from "./modules/archive/routes.ts";
 import { healthRoutes, metaRoutes } from "./modules/meta/routes.ts";
 import type { TopicRepository } from "./modules/topics/repository.ts";
 import { topicRoutes } from "./modules/topics/routes.ts";
@@ -90,6 +91,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     async (v1) => {
       await v1.register(topicRoutes, { service });
       await v1.register(metaRoutes, { service, repo: opts.repo });
+      await v1.register(archiveRoutes, { repo: opts.repo });
     },
     { prefix: "/api/v1" },
   );

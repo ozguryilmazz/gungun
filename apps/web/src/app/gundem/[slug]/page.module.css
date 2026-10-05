@@ -369,3 +369,11 @@
     padding: 20px;
   }
 }
+
+.archived {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--flat-soft);
+  color: var(--text-2);
+  font-size: 14px;
+}

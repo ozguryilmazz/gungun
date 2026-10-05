@@ -1,6 +1,6 @@
 # gundemci.org — Mimari ve MVP Planı (v0.1, taslak)
 
-> Durum: **Plan onaylandı (2026-10-05).** Kararlar en alttaki “Alınan kararlar” bölümünde. Aşama 1–7 tamamlandı (iskelet, veritabanı, tasarım, arayüz, backend API, arayüz ↔ API, veri toplama).
+> Durum: **Plan onaylandı (2026-10-05).** Kararlar en alttaki “Alınan kararlar” bölümünde. Aşama 1–8 tamamlandı (iskelet, veritabanı, tasarım, arayüz, backend API, arayüz ↔ API, veri toplama, gündem üretimi).
 > Tarih: 2026-10-05
 
 ---
@@ -358,7 +358,7 @@ Admin ID’leri UUID; tüm sorgular sahiplik/rol kontrolünden geçer (IDOR önl
 | 5   | Backend API               | Public endpoint’ler, validation, hata yönetimi, cache, rate limit, testler                                | ✅          |
 | 6   | Frontend ↔ API bağlantısı | Mock’tan gerçek API’ye geçiş                                                                              | ✅          |
 | 7   | Veri sağlayıcıları        | Provider arayüzü, safe-http, RSS + Google Trends adapter, worker, `fetch_runs`                            | ✅          |
-| 8   | Pipeline + skor           | Dedupe, basit kümeleme, skor, snapshot, yükselenler/düşenler, arşiv                                       | ✋          |
+| 8   | Pipeline + skor           | Dedupe, basit kümeleme, skor, snapshot, yükselenler/düşenler, arşiv                                       | ✅          |
 | 9   | Admin                     | Auth, konu yönetimi, provider durumu, audit log                                                           | ✋          |
 | 10  | Güvenlik sertleştirme     | Başlıklar/CSP, güvenlik testleri, bağımlılık denetimi                                                     | ✋          |
 | 11  | SEO                       | Metadata, OG, JSON-LD, sitemap, robots, canonical                                                         | ✋          |
@@ -483,3 +483,23 @@ Seçim ölçütü: Türkiye’de en çok takip edilen siteler + **farklı yayın
   - Ek bir kuyruk sistemi ancak iş sayısı artınca gerekecek.
 - **Kısmi başarı:** Bir kısım kaynak çalıştıysa sağlayıcı “başarılı” sayılır; hatalı kaynaklar `fetch_runs` kaydında listelenir.
 - **Adres doğrulaması bekliyor:** RSS adresleri geliştirme ortamından doğrulanamadı (ağ politikası). İlk gerçek deneme kullanıcının bilgisayarında `pnpm fetch:once all` ile yapılacak.
+
+### Aşama 8 notları
+
+- **Kümeleme (`apps/api/src/topics-pipeline`):**
+  - Türkçe ek soyucu kullanılır (faizini → faiz, kazasında → kaza); durak kelimeler atılır.
+  - Her başlık, kümenin “çekirdek” kelimeleriyle IDF ağırlıklı karşılaştırılır.
+  - Eşleşme koşulları: en az 2 ortak ana kelime, başlığın en az %30’u ortak, benzerlik ≥ 0,5.
+  - Zincirleme birleşme olmaz. Mevcut konuya bağlı haberler yerinde kalır, böylece konu kimliği ve adresi sabittir.
+- **Eşikler:** Konu kaydı için 2 farklı yayıncı gerekir. Yayın için 3 yayıncı ya da 2 yayıncı + Trends eşleşmesi gerekir. Tek kaynaklı haber gündem sayılmaz.
+- **Skor bileşenleri:**
+  - Haber görünürlüğü: son 6 saatte farklı yayıncı sayısı (log ölçek).
+  - Yükselme hızı: son 1 saat / önceki 3 saatin saatlik ortalaması.
+  - Arama ilgisi: Trends verisi son 2 saatte alınmışsa eşleşen terimin trafiği (log ölçek), eşleşme yoksa 0; veri hiç yoksa “bekleniyor”.
+  - Sosyal sinyal: bekleniyor.
+- **Başlık ve kategori:** Başlık, kaynak başlıklarından en temsil edici olanıdır (bağıran öneki ve ünlemleri temizlenir); kategori haber adreslerindeki bölüm adından çıkarılır. Konu yayına girene kadar ikisi de güncellenebilir, sonra sabit kalır.
+- **Özet:** AI kapalı olduğu için özet üretilmez. “Neden gündemde?” maddeleri yalnızca ölçülen veriden yazılır ve arayüzde “Veriden otomatik tespit” etiketi taşır. Editör özeti olan konulara dokunulmaz.
+- **Yaşam döngüsü:** aday → yayında → soğuyan (6 sa) → arşiv (24 sa). Arşivlenen konunun sayfası açık kalır ve “artık gündemde değil” notu gösterir.
+- **Arşiv:** `/arsiv` ve `/arsiv/YYYY-AA-GG` (İstanbul günü, o günkü en yüksek skora göre). Yalnızca bir kez yayına girmiş konular arşive girer.
+- **Çalışma:** Worker her veri çekmeden sonra, yeni veri gelmese de en geç 10 dakikada bir gündemi günceller. Elle çalıştırmak için `pnpm topics:build`.
+- **Sınırlar:** Farklı açılardan yazılmış başlıklar (ör. “derbi sonrası hakem tartışması”) ayrı konu olabilir; doğruluk, yanlış birleşmeye tercih edildi. Daha iyi gruplama ileride AI kümeleme ile (aşama 13).

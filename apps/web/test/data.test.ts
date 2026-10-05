@@ -31,6 +31,7 @@ const listBody = { items: [summary], meta: { generatedAt: NOW, isMock: true } };
 const detailBody = {
   item: {
     ...summary,
+    isArchived: false,
     reasons: ["Örnek: neden"],
     summaryOrigin: "manual",
     firstSeenAt: NOW,
@@ -116,5 +117,14 @@ describe("veri katmanı → API", () => {
     const init = fetchMock.mock.calls[0]?.[1];
     expect(init?.redirect).toBe("error");
     expect(init?.signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
+describe("arşiv", () => {
+  it("geçersiz tarih API'ye gönderilmez", async () => {
+    const { getArchiveDay } = await import("../src/lib/data");
+    for (const d of ["2026-13-40", "../../x", "2026-1-5", ""])
+      expect(await getArchiveDay(d)).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

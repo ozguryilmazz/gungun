@@ -11,6 +11,7 @@ export function SiteFooter() {
           gündemci haber üretmez; kaynakları analiz eder ve orijinal habere bağlantı verir.
         </p>
         <nav aria-label="Alt menü" className={styles.links}>
+          <Link href="/arsiv">Arşiv</Link>
           <Link href="/skor-nasil-hesaplanir">Skor nasıl hesaplanır?</Link>
         </nav>
       </div>

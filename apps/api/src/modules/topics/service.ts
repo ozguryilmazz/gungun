@@ -144,7 +144,8 @@ export class TopicService {
 
   private toDetail(row: TopicDetailRow, rank: number | null): TopicDetail {
     return {
-      ...toSummary(row, rank),
+      ...toSummary(row, row.isArchived ? null : rank),
+      isArchived: row.isArchived,
       reasons: row.reasons.filter((r) => typeof r === "string").slice(0, 10),
       summaryOrigin: row.summaryOrigin,
       firstSeenAt: row.firstSeenAt.toISOString(),

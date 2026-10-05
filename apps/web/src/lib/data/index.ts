@@ -2,10 +2,15 @@
 // Tüm veri backend API'den gelir (apps/api) ve sözleşme şemalarıyla doğrulanır.
 import "server-only";
 import {
+  ArchiveDateSchema,
+  ArchiveDayResponseSchema,
+  ArchiveIndexResponseSchema,
   StatusResponseSchema,
   TopicDetailResponseSchema,
   TopicListResponseSchema,
   isValidSlug,
+  type ArchiveDayResponse,
+  type ArchiveIndexResponse,
   type StatusResponse,
   type TopicDetailResponse,
   type TopicListResponse,
@@ -53,4 +58,14 @@ export async function getTopic(slug: string): Promise<TopicDetailResponse | null
 
 export async function getStatus(): Promise<StatusResponse> {
   return required(apiGet("/api/v1/meta/status", StatusResponseSchema));
+}
+
+export async function getArchiveIndex(): Promise<ArchiveIndexResponse> {
+  return required(apiGet("/api/v1/archive", ArchiveIndexResponseSchema));
+}
+
+/** Geçersiz veya kapsam dışı tarih → null (sayfa 404 gösterir) */
+export async function getArchiveDay(date: string): Promise<ArchiveDayResponse | null> {
+  if (!ArchiveDateSchema.safeParse(date).success) return null;
+  return apiGet(`/api/v1/archive/${encodeURIComponent(date)}`, ArchiveDayResponseSchema);
 }

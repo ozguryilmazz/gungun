@@ -2,8 +2,8 @@
 
 Türkiye'de internette **ne konuşuluyor, neden gündemde ve ne kadar hızlı yükseliyor** sorusuna yanıt veren gündem analiz platformu.
 
-> Durum: **Aşama 7 — veri toplama.** Haber RSS'leri ve Google Trends'ten veri çekme altyapısı hazır.
-> Toplanan veriler henüz gündem konularına dönüştürülmüyor (aşama 8); arayüzde hâlâ ÖRNEK konular görünür.
+> Durum: **Aşama 8 — gerçek gündem.** Haberler toplanıyor, konulara gruplanıyor, skorlanıyor ve
+> sitede gösteriliyor. Örnek konuları kaldırmak için `.env` içinde `USE_MOCK_DATA=false` yapıp `pnpm db:seed` çalıştırın.
 > Mimari ve MVP planı: [`docs/01-mimari-plan.md`](docs/01-mimari-plan.md)
 
 ## Gereksinimler
@@ -72,6 +72,21 @@ pnpm providers enable rss_news
 pnpm providers enable google_trends
 pnpm worker           # açık sağlayıcıları 10–15 dakikada bir çalıştırır (Ctrl+C ile durur)
 ```
+
+## Gündem nasıl oluşur?
+
+Yapay zekâ kullanılmaz; her adım kurala dayalıdır ve açıklanabilir.
+
+1. **Gruplama:** Son 24 saatin başlıkları Türkçe ekleri soyularak karşılaştırılır. Ortak, ayırt edici
+   kelimeleri olan başlıklar aynı konuya girer.
+2. **Konu ve yayın eşiği:** En az **2** farklı yayıncıda geçen olay konu olur. **3** yayıncıda geçerse
+   (ya da 2 yayıncıda geçip Google Trends'le eşleşirse) sitede yayına girer.
+3. **Başlık:** Kaynak başlıklarından seçilir; "SON DAKİKA:" gibi önekler ve bağıran biçim temizlenir.
+4. **Kategori:** Haber adreslerindeki bölüm adından çıkarılır (ör. `/ekonomi/`).
+5. **Özet:** Konular için özet **üretilmez**. "Neden gündemde?" bölümünde yalnızca ölçülen bilgiler yer
+   alır (kaç kaynakta geçtiği, son saatteki haber sayısı, eşleşen arama trendi).
+6. **Yaşam döngüsü:** 6 saat yeni haber gelmezse konu "soğuyan", 24 saat gelmezse "arşiv" olur.
+   Arşiv sayfaları: `/arsiv`.
 
 ## API (v1)
 

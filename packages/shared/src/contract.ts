@@ -60,6 +60,8 @@ export const SourceViewSchema = z.object({
 });
 
 export const TopicDetailSchema = TopicSummarySchema.extend({
+  /** true: konu artık gündemde değil, arşivden görüntüleniyor */
+  isArchived: z.boolean(),
   reasons: z.array(z.string().max(300)).max(10),
   summaryOrigin: z.enum(["none", "manual", "ai"]),
   firstSeenAt: isoDate,
@@ -121,6 +123,40 @@ export const ErrorResponseSchema = z.object({
   }),
 });
 
+/** YYYY-AA-GG biçimli, takvimde var olan bir gün */
+export const ArchiveDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((v) => {
+    const d = new Date(`${v}T00:00:00Z`);
+    return !Number.isNaN(d.getTime()) && d.toISOString().startsWith(v);
+  });
+
+export const ArchiveItemSchema = z.object({
+  slug,
+  title: z.string().min(1).max(200),
+  category: CategorySchema,
+  /** O günkü en yüksek gündem skoru */
+  peakScore: score.nullable(),
+  rank: z.number().int().positive(),
+  firstSeenAt: isoDate,
+  sourceCount: z.number().int().min(0),
+  isMock: z.boolean(),
+});
+
+export const ArchiveDayResponseSchema = z.object({
+  date: ArchiveDateSchema,
+  items: z.array(ArchiveItemSchema),
+  meta: ResponseMetaSchema,
+});
+
+export const ArchiveIndexResponseSchema = z.object({
+  days: z.array(z.object({ date: ArchiveDateSchema, topicCount: z.number().int().min(0) })),
+});
+
+export type ArchiveItem = z.infer<typeof ArchiveItemSchema>;
+export type ArchiveDayResponse = z.infer<typeof ArchiveDayResponseSchema>;
+export type ArchiveIndexResponse = z.infer<typeof ArchiveIndexResponseSchema>;
 export type TopicHistoryResponse = z.infer<typeof TopicHistoryResponseSchema>;
 export type CategoryListResponse = z.infer<typeof CategoryListResponseSchema>;
 export type ProviderStatus = z.infer<typeof ProviderStatusSchema>;

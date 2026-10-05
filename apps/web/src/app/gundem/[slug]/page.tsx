@@ -31,6 +31,12 @@ const SUMMARY_LABELS = {
   none: null,
 } as const;
 
+const REASON_LABELS = {
+  manual: "Editör",
+  ai: "Otomatik",
+  none: "Veriden otomatik tespit",
+} as const;
+
 export default async function TopicPage({ params }: Props) {
   const result = await getTopic((await params).slug);
   if (!result) notFound();
@@ -53,6 +59,12 @@ export default async function TopicPage({ params }: Props) {
             <li aria-current="page">Neden gündemde?</li>
           </ol>
         </nav>
+
+        {topic.isArchived ? (
+          <p className={styles.archived} role="note">
+            Bu konu artık gündemde değil; arşivden görüntülüyorsunuz.
+          </p>
+        ) : null}
 
         <header className={styles.header}>
           <p className={styles.eyebrow}>Neden gündemde?</p>
@@ -112,15 +124,26 @@ export default async function TopicPage({ params }: Props) {
               {topic.summary ? (
                 <p className={styles.summary}>{topic.summary}</p>
               ) : (
-                <p className={styles.pending}>Özet hazırlanıyor.</p>
+                <p className={styles.pending}>
+                  Bu konu için henüz bir özet yok. Ayrıntılar için aşağıdaki kaynaklardaki orijinal
+                  haberlere bakabilirsiniz.
+                </p>
               )}
+              {topic.summaryOrigin === "none" ? (
+                <p className={styles.fine}>
+                  Konu başlığı, kaynak haber başlıklarından otomatik seçilmiştir.
+                </p>
+              ) : null}
             </section>
 
             {topic.reasons.length > 0 ? (
               <section className={styles.section} aria-labelledby="reasons-title">
-                <h2 id="reasons-title" className={styles.h2}>
-                  Neden gündemde?
-                </h2>
+                <div className={styles.sectionHead}>
+                  <h2 id="reasons-title" className={styles.h2}>
+                    Neden gündemde?
+                  </h2>
+                  <span className={styles.tag}>{REASON_LABELS[topic.summaryOrigin]}</span>
+                </div>
                 <ul className={styles.reasons}>
                   {topic.reasons.map((r) => (
                     <li key={r}>{r}</li>

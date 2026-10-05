@@ -12,7 +12,8 @@
     "worker": "tsx src/worker.ts",
     "fetch:once": "tsx src/cli/fetch-once.ts",
     "providers": "tsx src/cli/providers.ts",
-    "feed:inspect": "tsx src/cli/inspect-feed.ts"
+    "feed:inspect": "tsx src/cli/inspect-feed.ts",
+    "topics:build": "tsx src/cli/build-topics.ts"
   },
   "dependencies": {
     "@fastify/helmet": "13.1.1",

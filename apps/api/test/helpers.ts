@@ -105,6 +105,7 @@ export function fakeRepo(rows: TopicRow[] = ROWS): FakeRepo {
       if (!row) return null;
       const detail: TopicDetailRow = {
         ...row,
+        isArchived: false,
         reasons: ["Örnek: neden"],
         summaryOrigin: "manual",
         components: {
@@ -139,6 +140,24 @@ export function fakeRepo(rows: TopicRow[] = ROWS): FakeRepo {
     },
     async listProviders() {
       return PROVIDERS;
+    },
+    async archiveDay() {
+      count("archiveDay");
+      return rows
+        .filter((r) => r.latest)
+        .map((r) => ({
+          slug: r.slug,
+          title: r.title,
+          categorySlug: r.categorySlug,
+          categoryName: r.categoryName,
+          peakScore: r.latest!.score,
+          firstSeenAt: r.firstSeenAt,
+          sourceCount: r.sourceCount,
+          isMock: r.isMock,
+        }));
+    },
+    async archiveDays() {
+      return [{ date: "2026-10-05", topicCount: 3 }];
     },
     async ping() {
       if (repo.pingFails) throw new Error("connect ECONNREFUSED 10.0.0.5:5432 password=gizli");

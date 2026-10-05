@@ -58,3 +58,18 @@ export const TREND_ARROWS: Record<TopicSummary["trend"], string> = {
   falling: "▼",
   unknown: "",
 };
+
+/** "2026-10-05" → "5 Ekim 2026" (takvim günü; saat dilimi kaydırması olmadan) */
+export function formatIsoDay(day: string): string {
+  return new Intl.DateTimeFormat("tr-TR", {
+    timeZone: "UTC",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${day}T00:00:00Z`));
+}
+
+/** İstanbul'a göre bugünün tarihi: "2026-10-05" */
+export function istanbulToday(now: Date = new Date()): string {
+  return new Date(now.getTime() + 3 * 3_600_000).toISOString().slice(0, 10);
+}
