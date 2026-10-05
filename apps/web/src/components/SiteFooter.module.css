@@ -1,0 +1,28 @@
+.footer {
+  margin-top: auto;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+.inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding-top: 24px;
+  padding-bottom: 32px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.note {
+  flex: 1 1 320px;
+  line-height: 1.5;
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}

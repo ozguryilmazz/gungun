@@ -1,0 +1,44 @@
+.nav {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 calc(var(--gutter) * -1);
+  padding: 0 var(--gutter) 4px;
+}
+
+.chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.chip:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+.active,
+.active:hover {
+  background: var(--text);
+  border-color: var(--text);
+  color: #fff;
+}
+
+@media (min-width: 768px) {
+  .nav {
+    flex-wrap: wrap;
+    overflow: visible;
+    margin: 0;
+    padding: 0;
+  }
+}

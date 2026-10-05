@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { MOCK_TOPICS, computeScore } from "../src/seed/mock-data.js";
-import { CATEGORIES } from "../src/seed/reference-data.js";
+import { CATEGORIES } from "../src/categories.ts";
+import { MOCK_TOPICS } from "../src/mock-topics.ts";
+import { changePercent, classifyTrend, computeScore } from "../src/scoring.ts";
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
@@ -83,5 +84,27 @@ describe("computeScore", () => {
     expect(() =>
       computeScore({ news_visibility: 1.5, velocity: 0, search_interest: 0, social: null }),
     ).toThrow(RangeError);
+  });
+});
+
+describe("changePercent / classifyTrend", () => {
+  it("iki ölçüm yoksa değişim hesaplamaz", () => {
+    expect(changePercent(null, 50)).toBeNull();
+    expect(changePercent(50, null)).toBeNull();
+    expect(changePercent(0, 50)).toBeNull();
+  });
+
+  it("yüzde değişimi yuvarlar", () => {
+    expect(changePercent(55, 92)).toBe(67);
+    expect(changePercent(69, 33)).toBe(-52);
+  });
+
+  it("eşiklere göre sınıflandırır", () => {
+    expect(classifyTrend(null)).toBe("unknown");
+    expect(classifyTrend(40)).toBe("surging");
+    expect(classifyTrend(10)).toBe("rising");
+    expect(classifyTrend(9)).toBe("flat");
+    expect(classifyTrend(-9)).toBe("flat");
+    expect(classifyTrend(-10)).toBe("falling");
   });
 });

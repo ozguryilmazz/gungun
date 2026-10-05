@@ -1,0 +1,169 @@
+/* Mobil: sıra · kategori · skor üstte; başlık, çubuk, trend, özet tam genişlikte.
+   Masaüstü (≥768px): sıra | içerik | skor sütunları. */
+.card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "rank category score"
+    "title title title"
+    "bar bar bar"
+    "trend trend trend"
+    "summary summary summary"
+    "meta meta meta";
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 10px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.15s ease;
+}
+
+.card:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.card:hover .title {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.rank {
+  grid-area: rank;
+  min-width: 18px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.category {
+  grid-area: category;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.score {
+  grid-area: score;
+  justify-self: end;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.outOf {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.noScore {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.title {
+  grid-area: title;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+.bar {
+  grid-area: bar;
+}
+
+.trend {
+  grid-area: trend;
+}
+
+.summary {
+  grid-area: summary;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.meta {
+  grid-area: meta;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+@media (min-width: 768px) {
+  .card {
+    grid-template-columns: 40px minmax(0, 1fr) 150px;
+    grid-template-areas:
+      "rank category score"
+      "rank title bar"
+      "rank summary trend"
+      "rank meta .";
+    align-items: start;
+    column-gap: 20px;
+    row-gap: 8px;
+    padding: 20px 24px;
+  }
+
+  .rank {
+    font-size: 22px;
+    line-height: 1.2;
+  }
+
+  .title {
+    font-size: 20px;
+  }
+
+  .summary {
+    font-size: 15px;
+  }
+
+  .score {
+    font-size: 32px;
+    grid-row: 1 / span 1;
+  }
+
+  .bar {
+    padding-top: 10px;
+  }
+
+  .trend {
+    justify-self: end;
+    text-align: right;
+  }
+
+  /* Dar skor sütununda değer ve etiket alt alta */
+  .trend [data-part="value"],
+  .trend [data-part="label"] {
+    display: block;
+  }
+
+  .trend [data-part="label"] {
+    margin-top: 2px;
+    font-family: var(--font-sans);
+    font-weight: 500;
+    white-space: normal;
+    color: var(--muted);
+  }
+
+  .trend [data-part="label"]::before {
+    content: none;
+  }
+}

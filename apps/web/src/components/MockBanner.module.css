@@ -1,0 +1,16 @@
+.banner {
+  background: var(--mock-bg);
+  border-bottom: 1px solid var(--mock-border);
+  color: var(--mock-text);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.banner p {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.banner strong {
+  letter-spacing: 0.05em;
+}

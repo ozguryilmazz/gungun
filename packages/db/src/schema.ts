@@ -1,3 +1,4 @@
+import type { ScoreComponents } from "@gundemci/shared";
 import { sql } from "drizzle-orm";
 import {
   bigint,
@@ -207,18 +208,7 @@ export const topicSlugRedirects = pgTable(
   (t) => [index("topic_slug_redirects_topic_idx").on(t.topicId)],
 );
 
-export interface ScoreComponent {
-  /** Bu bileşen için gerçek veri var mı? false ise arayüzde "Veri bekleniyor". */
-  available: boolean;
-  /** 0–1 arası normalize değer; available=false ise null */
-  normalized: number | null;
-  /** Ham ölçüm (örn. farklı yayıncı sayısı); available=false ise null */
-  raw: number | null;
-}
-
-export type ScoreComponents = Partial<
-  Record<"news_visibility" | "velocity" | "search_interest" | "social", ScoreComponent>
->;
+export type { ScoreComponent, ScoreComponents } from "@gundemci/shared";
 
 /** Konunun belirli bir andaki skoru. Trend, yükselen/düşen ve arşiv buradan türetilir. */
 export const topicSnapshots = pgTable(

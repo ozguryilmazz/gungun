@@ -19,11 +19,15 @@
     "db:logs": "docker compose --env-file .env -f infra/docker-compose.yml logs -f postgres",
     "db:generate": "pnpm --filter @gundemci/db generate",
     "db:migrate": "pnpm --filter @gundemci/db migrate",
-    "db:seed": "pnpm --filter @gundemci/db seed"
+    "db:seed": "pnpm --filter @gundemci/db seed",
+    "dev": "pnpm --filter @gundemci/web dev",
+    "build": "pnpm --filter @gundemci/web build",
+    "start": "pnpm --filter @gundemci/web start"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@gundemci/config": "workspace:*",
+    "@next/eslint-plugin-next": "16.3.8",
     "eslint": "10.12.0",
     "eslint-config-prettier": "10.1.8",
     "globals": "17.13.0",

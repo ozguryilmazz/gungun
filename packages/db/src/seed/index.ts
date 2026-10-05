@@ -11,7 +11,8 @@ import {
   topics,
   topicSnapshots,
 } from "../schema.js";
-import { MOCK_PROVIDER, MOCK_PUBLISHER, MOCK_TOPICS, computeScore } from "./mock-data.js";
+import { MOCK_TOPICS, computeScore } from "@gundemci/shared";
+import { MOCK_PROVIDER, MOCK_PUBLISHER } from "./mock-data.js";
 import { CATEGORIES, DATA_PROVIDERS, PUBLISHERS } from "./reference-data.js";
 
 export interface SeedOptions {

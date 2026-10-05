@@ -1,0 +1,78 @@
+.box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.description {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.list li {
+  border-top: 1px solid var(--divider);
+}
+
+.row {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.row:hover {
+  color: var(--text);
+}
+
+.row:hover .name {
+  text-decoration: underline;
+}
+
+.n {
+  width: 14px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.name {
+  flex-grow: 1;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.35;
+  padding: 8px 0;
+}
+
+.empty {
+  font-size: 14px;
+  color: var(--muted);
+  padding: 4px 0 12px;
+}
+
+@media (min-width: 768px) {
+  .box {
+    padding: 20px 20px 8px;
+  }
+}

@@ -1,0 +1,81 @@
+.layout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 24px 32px;
+  padding-top: 24px;
+  padding-bottom: 40px;
+}
+
+.main {
+  flex: 999 1 560px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.aside {
+  flex: 1 1 300px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.anchor {
+  scroll-margin-top: 16px;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.heading {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.sub {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.note {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+}
+
+@media (min-width: 768px) {
+  .layout {
+    padding-top: 32px;
+    padding-bottom: 48px;
+  }
+
+  .heading {
+    font-size: 34px;
+  }
+}

@@ -15,8 +15,8 @@ import {
   topics,
   topicSnapshots,
 } from "../src/schema.js";
+import { MOCK_TOPICS } from "@gundemci/shared";
 import { seedDatabase } from "../src/seed/index.js";
-import { MOCK_TOPICS } from "../src/seed/mock-data.js";
 import { CATEGORIES, PUBLISHERS } from "../src/seed/reference-data.js";
 
 const TEST_DATABASE_URL = process.env.TEST_DATABASE_URL;

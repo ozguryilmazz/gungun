@@ -1,6 +1,6 @@
 # gundemci.org — Mimari ve MVP Planı (v0.1, taslak)
 
-> Durum: **Plan onaylandı (2026-10-05).** Kararlar en alttaki “Alınan kararlar” bölümünde. Aşama 1 (repo iskeleti) ve aşama 2 (veritabanı) tamamlandı.
+> Durum: **Plan onaylandı (2026-10-05).** Kararlar en alttaki “Alınan kararlar” bölümünde. Aşama 1–4 tamamlandı (iskelet, veritabanı, tasarım, ilk çalışan arayüz).
 > Tarih: 2026-10-05
 
 ---
@@ -353,8 +353,8 @@ Admin ID’leri UUID; tüm sorgular sahiplik/rol kontrolünden geçer (IDOR önl
 | 0   | **Bu belge**              | Mimari plan                                                                                               | ✅          |
 | 1   | Repo iskeleti             | pnpm workspace, tsconfig/eslint/prettier, `.gitignore`, `.env.example`, README, docker-compose (Postgres) | ✅          |
 | 2   | Veritabanı                | Drizzle şema + migration + **işaretli** seed verisi                                                       | ✅          |
-| 3   | UI wireframe → tasarım    | Wordmark alternatifleri, renk/tipografi token’ları, kart bileşeni prototipi                               | ✋          |
-| 4   | İlk çalışan frontend      | Ana sayfa + detay + kategori (seed veriden, “ÖRNEK VERİ” şeridiyle)                                       | ✋          |
+| 3   | UI wireframe → tasarım    | Wordmark alternatifleri, renk/tipografi token’ları, kart bileşeni prototipi                               | ✅          |
+| 4   | İlk çalışan frontend      | Ana sayfa + detay + kategori (seed veriden, “ÖRNEK VERİ” şeridiyle)                                       | ✅          |
 | 5   | Backend API               | Public endpoint’ler, validation, hata yönetimi, cache, rate limit, testler                                | ✋          |
 | 6   | Frontend ↔ API bağlantısı | Mock’tan gerçek API’ye geçiş                                                                              | ✋          |
 | 7   | Veri sağlayıcıları        | Provider arayüzü, safe-http, RSS + Google Trends adapter, worker, `fetch_runs`                            | ✋          |
@@ -395,13 +395,14 @@ Admin ID’leri UUID; tüm sorgular sahiplik/rol kontrolünden geçer (IDOR önl
 
 ## Alınan kararlar (2026-10-05)
 
-| Konu         | Karar                                                                                                        |
-| ------------ | ------------------------------------------------------------------------------------------------------------ |
-| Docker       | Docker Desktop kurulu → Postgres `infra/docker-compose.yml` ile çalışır                                      |
-| URL yapısı   | Konu: `/gundem/[slug]` · Arşiv: `/arsiv/YYYY-MM-DD` · Kategori: `/kategori/[slug]`                           |
-| Paket yön.   | pnpm (sürüm `package.json` → `packageManager` alanında sabit, Corepack ile kurulur)                          |
-| AI özet      | MVP’de **kapalı** (`AI_SUMMARY_ENABLED=false`); sağlayıcı/bütçe kararı aşama 13’te                           |
-| Veri kaynağı | Google Trends TR trend RSS + aşağıdaki haber RSS’leri. Yalnızca başlık/link/zaman alınır, tam metin çekilmez |
+| Konu         | Karar                                                                                                                                    |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Docker       | Docker Desktop kurulu → Postgres `infra/docker-compose.yml` ile çalışır                                                                  |
+| URL yapısı   | Konu: `/gundem/[slug]` · Arşiv: `/arsiv/YYYY-MM-DD` · Kategori: `/kategori/[slug]`                                                       |
+| Paket yön.   | pnpm (sürüm `package.json` → `packageManager` alanında sabit, Corepack ile kurulur)                                                      |
+| Logo / renk  | Logo **C** (kare “g” işareti + “gündemci”), vurgu rengi `#0B5C7A`; yazı: Schibsted Grotesk + IBM Plex Mono (npm’den, kendi sunucumuzdan) |
+| AI özet      | MVP’de **kapalı** (`AI_SUMMARY_ENABLED=false`); sağlayıcı/bütçe kararı aşama 13’te                                                       |
+| Veri kaynağı | Google Trends TR trend RSS + aşağıdaki haber RSS’leri. Yalnızca başlık/link/zaman alınır, tam metin çekilmez                             |
 
 ### MVP haber kaynakları (RSS)
 
@@ -429,3 +430,13 @@ Seçim ölçütü: Türkiye’de en çok takip edilen siteler + **farklı yayın
 - Liste koda gömülmez; `data_providers` / `publishers` tablolarında tutulur ve admin panelinden açılıp kapatılabilir. Bu liste aynı zamanda SSRF koruması için **domain allowlist**’tir.
 - Her kaynağın kullanım şartları/robots.txt’si aşama 7’de kontrol edilir; istek sıklığı kaynak başına ≥10 dk, tanımlı `User-Agent` (`gundemciBot/0.1 (+https://gundemci.org/bot)`).
 - Skor hesaplamasında “farklı yayıncı sayısı” kullanıldığı için tek bir kaynağın çok sayıda haberi skoru şişirmez.
+
+### Aşama 4 notları
+
+- `packages/shared`: API sözleşmesi (zod şemaları), skor formülü, trend sınıflandırması, kategoriler ve örnek konular. Veritabanı seed’i, arayüz ve ileride API aynı kodu kullanır.
+- Arayüzün tek veri erişim noktası `apps/web/src/lib/data` (yalnızca sunucuda çalışır). Şu an örnek veri kaynağından okur ve her yanıtı sözleşme şemasıyla doğrular; aşama 6’da içi backend API çağrısına çevrilecek.
+- Kategori filtresi JavaScript gerektirmez (her kategori kendi sayfası: `/kategori/[slug]`). Tarayıcıya gönderilen JavaScript yalnızca Next.js çekirdeği.
+- Yazı tipleri Google’a istek atmadan kendi sunucumuzdan yüklenir (gizlilik + CSP `font-src 'self'`).
+- Temel güvenlik başlıkları (CSP, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy) şimdiden açık; nonce tabanlı sıkı CSP aşama 10’da.
+- Site `noindex` — canlıya geçişe ve gerçek veriye kadar arama motorlarına kapalı.
+- `/arsiv` sayfaları aşama 8’de (snapshot verisi oluşunca); şimdilik menüde yok.

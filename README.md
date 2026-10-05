@@ -2,7 +2,8 @@
 
 Türkiye'de internette **ne konuşuluyor, neden gündemde ve ne kadar hızlı yükseliyor** sorusuna yanıt veren gündem analiz platformu.
 
-> Durum: **Aşama 2 — veritabanı.** Şema, migration ve işaretli örnek veri hazır; arayüz henüz yok.
+> Durum: **Aşama 4 — ilk çalışan arayüz.** Ana sayfa, kategori, konu detayı ve skor açıklaması
+> sayfaları örnek veriyle çalışıyor. Arayüz henüz veritabanına bağlı değil (aşama 5–6: backend API).
 > Mimari ve MVP planı: [`docs/01-mimari-plan.md`](docs/01-mimari-plan.md)
 
 ## Gereksinimler
@@ -30,6 +31,9 @@ pnpm db:up
 # Tabloları oluştur ve başlangıç verisini yükle
 pnpm db:migrate
 pnpm db:seed
+
+# Arayüzü geliştirme modunda başlat → http://localhost:3000
+pnpm dev
 ```
 
 > ⚠ `USE_MOCK_DATA=true` iken `db:seed` **örnek** konular yükler. Bunlar gerçek değildir:
@@ -51,8 +55,10 @@ pnpm db:seed
 ## Klasör yapısı
 
 ```
-apps/       web (Next.js) ve api (Fastify) — sonraki aşamalarda
-packages/   config (ortak TS ayarları), db (şema, migration, seed); shared sonraki aşamalarda
+apps/web    Next.js arayüzü (şimdilik örnek veri kaynağıyla)
+apps/api    Fastify backend — aşama 5
+packages/   config (ortak TS ayarları), db (şema, migration, seed),
+            shared (API sözleşmesi, skor hesabı, kategoriler, örnek konular)
 infra/      lokal docker-compose
 docs/       mimari ve kararlar
 ```

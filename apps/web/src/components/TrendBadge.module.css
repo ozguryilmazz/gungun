@@ -1,0 +1,42 @@
+.badge {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.up {
+  color: var(--accent);
+}
+
+.down {
+  color: var(--down);
+}
+
+.flat {
+  color: var(--muted);
+}
+
+.boxed {
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.boxed.up {
+  background: var(--accent-soft);
+}
+
+.boxed.down {
+  background: var(--down-soft);
+}
+
+.boxed.flat {
+  background: var(--flat-soft);
+}
+
+.label::before {
+  content: " · ";
+}

@@ -1,0 +1,108 @@
+// Public API sözleşmesi. Backend bu şemalara uyan yanıt üretir, frontend gelen yanıtı
+// bu şemalarla DOĞRULAR (güvenilmeyen veri gibi davranır).
+import { z } from "zod";
+import { COMPONENT_KEYS } from "./scoring.ts";
+
+const isoDate = z.iso.datetime({ offset: true });
+const slug = z
+  .string()
+  .max(160)
+  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+const score = z.number().int().min(0).max(100);
+
+/** Yalnızca http(s) bağlantılar; javascript:, data: vb. reddedilir */
+export const SafeUrlSchema = z.url({ protocol: /^https?$/ }).max(2048);
+
+export const CategorySchema = z.object({
+  slug: z.string().max(32),
+  name: z.string().max(64),
+});
+
+export const TrendSchema = z.enum(["surging", "rising", "flat", "falling", "unknown"]);
+
+export const TopicSummarySchema = z.object({
+  slug,
+  title: z.string().min(1).max(200),
+  category: CategorySchema,
+  rank: z.number().int().positive().nullable(),
+  /** null = hiç sinyal yok, skor hesaplanmadı */
+  score: score.nullable(),
+  previousScore: score.nullable(),
+  /** null = karşılaştırılacak iki ölçüm yok */
+  changePct: z.number().int().nullable(),
+  trend: TrendSchema,
+  signalsAvailable: z.number().int().min(0),
+  signalsTotal: z.number().int().min(0),
+  sourceCount: z.number().int().min(0),
+  summary: z.string().max(1200).nullable(),
+  updatedAt: isoDate,
+  isMock: z.boolean(),
+});
+
+export const ScoreComponentViewSchema = z.object({
+  key: z.enum(COMPONENT_KEYS as [string, ...string[]]),
+  label: z.string(),
+  available: z.boolean(),
+  /** 0–100; available=false ise null */
+  value: score.nullable(),
+});
+
+export const TimelineEventViewSchema = z.object({
+  type: z.enum(["first_source", "news_spread", "search_spike", "entered_top5", "peak"]),
+  occurredAt: isoDate,
+});
+
+export const SourceViewSchema = z.object({
+  title: z.string().min(1).max(300),
+  url: SafeUrlSchema,
+  publisherName: z.string().max(96),
+  publishedAt: isoDate.nullable(),
+});
+
+export const TopicDetailSchema = TopicSummarySchema.extend({
+  reasons: z.array(z.string().max(300)).max(10),
+  summaryOrigin: z.enum(["none", "manual", "ai"]),
+  firstSeenAt: isoDate,
+  components: z.array(ScoreComponentViewSchema),
+  timeline: z.array(TimelineEventViewSchema),
+  sources: z.array(SourceViewSchema),
+});
+
+export const ResponseMetaSchema = z.object({
+  generatedAt: isoDate,
+  /** true ise yanıttaki veriler ÖRNEK veridir */
+  isMock: z.boolean(),
+});
+
+export const TopicListResponseSchema = z.object({
+  items: z.array(TopicSummarySchema),
+  meta: ResponseMetaSchema,
+});
+
+export const TopicDetailResponseSchema = z.object({
+  item: TopicDetailSchema,
+  meta: ResponseMetaSchema,
+});
+
+export type Category = z.infer<typeof CategorySchema>;
+export type TopicSummary = z.infer<typeof TopicSummarySchema>;
+export type TopicDetail = z.infer<typeof TopicDetailSchema>;
+export type ScoreComponentView = z.infer<typeof ScoreComponentViewSchema>;
+export type TimelineEventView = z.infer<typeof TimelineEventViewSchema>;
+export type SourceView = z.infer<typeof SourceViewSchema>;
+export type ResponseMeta = z.infer<typeof ResponseMetaSchema>;
+export type TopicListResponse = z.infer<typeof TopicListResponseSchema>;
+export type TopicDetailResponse = z.infer<typeof TopicDetailResponseSchema>;
+
+export const TIMELINE_LABELS: Record<TimelineEventView["type"], string> = {
+  first_source: "İlk kaynakta yer aldı",
+  news_spread: "Birden fazla yayıncıda yer aldı",
+  search_spike: "Arama ilgisinde sıçrama",
+  entered_top5: "Gündem sıralamasında ilk 5’e girdi",
+  peak: "Zirve skora ulaştı",
+};
+
+/** URL'deki slug parametresini veritabanına/API'ye gitmeden önce doğrular */
+export function isValidSlug(value: string): boolean {
+  return slug.safeParse(value).success;
+}

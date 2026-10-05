@@ -1,0 +1,33 @@
+{
+  "extends": "@gundemci/config/tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "allowJs": false,
+    "declaration": false,
+    "sourceMap": false,
+    "incremental": true,
+    "types": ["node"],
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "allowImportingTsExtensions": true
+  },
+  "include": [
+    "next-env.d.ts",
+    "src",
+    "test",
+    "next.config.ts",
+    "vitest.config.ts",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

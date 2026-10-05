@@ -1,0 +1,23 @@
+{
+  "name": "@gundemci/shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Ortak tipler, API sözleşmesi (zod), skor hesabı ve sabitler",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@gundemci/config": "workspace:*",
+    "@types/node": "24.19.1",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "name": "@gundemci/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "gundemci.org arayüzü (Next.js)",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fontsource-variable/schibsted-grotesk": "5.3.0",
+    "@fontsource/ibm-plex-mono": "5.3.0",
+    "@gundemci/shared": "workspace:*",
+    "next": "16.3.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "0.0.1"
+  },
+  "devDependencies": {
+    "@gundemci/config": "workspace:*",
+    "@next/eslint-plugin-next": "16.3.8",
+    "@types/node": "24.19.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3"
+  }
+}
