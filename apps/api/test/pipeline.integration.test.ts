@@ -121,6 +121,24 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
     await addItem(5, "Derbide kazanan Fenerbahçe: Galatasaray 1-2 Fenerbahçe", -50, "spor");
     await addItem(6, "İstanbul'da kar yağışı ulaşımı aksattı", -30, "gundem");
 
+    // Filtreden önce açılmış bir site adı konusu (eski davranış): filtreyle gizlenmeli
+    const [diger] = await db.execute<{ id: number }>(
+      sql`select id from categories where slug = 'diger'`,
+    );
+    await db.insert(topics).values({
+      slug: "trendyol",
+      title: "Trendyol",
+      kind: "trend",
+      trendKey: "trendyol",
+      categoryId: Number(diger!.id),
+      status: "published",
+      publishedAt: at(-60),
+      reasons: [],
+      summaryOrigin: "none",
+      isMock: false,
+      firstSeenAt: at(-60),
+    });
+
     // Trend listesi (5 dk önce çekilmiş)
     await trendBatch(-5, [
       {
@@ -135,7 +153,9 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
         ],
       },
       { term: "merkez bankası", traffic: 20000 },
-      { term: "uzay", traffic: 5000 },
+      { term: "uzay istasyonu", traffic: 5000 },
+      { term: "zeytin", traffic: 4000 }, // tek kelime, haberi yok → konu olmaz
+      { term: "trendyol", traffic: 30000 }, // siteye gitmek için arama → elenir
       { term: "sözcü", traffic: 10000 }, // medya adı → konu olmaz
     ]);
   });
@@ -144,12 +164,20 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
     await close?.();
   });
 
-  it("her trend araması bir konu olur; haberler konuyu açıklar; medya adı atlanır", async () => {
+  it("trend aramaları konu olur; haberler konuyu açıklar; site adı ve açıklanamayan tek kelime elenir", async () => {
     const r = await build(T0);
     expect(r.trends).toBe(3);
-    const trendTopics = await real("trend");
-    expect(trendTopics.map((t) => t.title).sort()).toEqual(["Derbi", "Merkez Bankası", "Uzay"]);
+    expect(r.filtered).toBe(3); // sözcü, zeytin, trendyol
+    const trendTopics = (await real("trend")).filter((t) => t.status !== "hidden");
+    expect(trendTopics.map((t) => t.title).sort()).toEqual([
+      "Derbi",
+      "Merkez Bankası",
+      "Uzay İstasyonu",
+    ]);
     expect(trendTopics.every((t) => t.status === "published")).toBe(true);
+    const [trendyol] = await db.select().from(topics).where(eq(topics.trendKey, "trendyol"));
+    expect(trendyol?.status).toBe("hidden");
+    expect(trendyol?.reasons[0]).toMatch(/^Filtre: Siteye/);
     // Aramayla eşleşen kümeler ayrı haber konusu açmaz
     expect(await real("news")).toHaveLength(0);
 
@@ -168,8 +196,8 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
     ).map((e) => e.type);
     expect(events).toEqual(expect.arrayContaining(["trend_listed", "entered_top5"]));
 
-    // Haberi olmayan arama da konu olur (yalnızca arama sinyaliyle)
-    const uzay = trendTopics.find((t) => t.title === "Uzay")!;
+    // Haberi olmayan çok kelimeli arama da konu olur (yalnızca arama sinyaliyle)
+    const uzay = trendTopics.find((t) => t.title === "Uzay İstasyonu")!;
     expect(await db.select().from(topicItems).where(eq(topicItems.topicId, uzay.id))).toHaveLength(
       0,
     );
@@ -183,7 +211,7 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
   });
 
   it("eskiden bağlanmış alakasız ilgili haber konudan çıkarılır; açıklaması olmayan arama sonra sıralanır", async () => {
-    const uzay = (await real("trend")).find((t) => t.title === "Uzay")!;
+    const uzay = (await real("trend")).find((t) => t.title === "Uzay İstasyonu")!;
     const url = "https://www.baskasite.example/alakasiz";
     const [stale] = await db
       .insert(sourceItems)
@@ -210,7 +238,7 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
       logLevel: "silent",
     });
     const list = TopicListResponseSchema.parse((await app.inject("/api/v1/topics")).json());
-    expect(list.items.at(-1)?.title).toBe("Uzay");
+    expect(list.items.at(-1)?.title).toBe("Uzay İstasyonu");
     expect(list.items.at(-1)?.sourceCount).toBe(0);
     await app.close();
   });
@@ -269,7 +297,8 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
 
     // 5 saat sonra Trends verisi de eskidi: tüm trend konuları arşivde
     await build(at(60 * 5));
-    expect((await real("trend")).every((t) => t.status === "archived")).toBe(true);
+    const remaining = (await real("trend")).filter((t) => t.status !== "hidden");
+    expect(remaining.every((t) => t.status === "archived")).toBe(true);
 
     const app = await buildApp({
       repo: createTopicRepository(db),
@@ -281,7 +310,7 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
       (await app.inject("/api/v1/archive/2026-10-05")).json(),
     );
     expect(day.items.map((i) => i.title)).toEqual(
-      expect.arrayContaining(["Derbi", "Merkez Bankası", "Uzay"]),
+      expect.arrayContaining(["Derbi", "Merkez Bankası", "Uzay İstasyonu"]),
     );
     const detail = TopicDetailResponseSchema.parse(
       (await app.inject(`/api/v1/topics/${merkez.slug}`)).json(),

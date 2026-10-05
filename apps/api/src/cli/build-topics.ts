@@ -19,6 +19,7 @@ try {
     console.log(`Yayında               : ${r.published}`);
     console.log(`Soğuyan               : ${r.cooling}`);
     console.log(`Arşive düşen          : ${r.archived}`);
+    console.log(`Elenen arama          : ${r.filtered} (ayrıntı: pnpm trends:filter)`);
     console.log(`Skor kaydı (snapshot) : ${r.snapshots}`);
   }
 } finally {

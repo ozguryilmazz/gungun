@@ -13,7 +13,8 @@
     "fetch:once": "tsx src/cli/fetch-once.ts",
     "providers": "tsx src/cli/providers.ts",
     "feed:inspect": "tsx src/cli/inspect-feed.ts",
-    "topics:build": "tsx src/cli/build-topics.ts"
+    "topics:build": "tsx src/cli/build-topics.ts",
+    "trends:filter": "tsx src/cli/trends-filter.ts"
   },
   "dependencies": {
     "@fastify/helmet": "13.1.1",

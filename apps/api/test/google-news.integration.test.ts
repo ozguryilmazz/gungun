@@ -48,10 +48,10 @@ function fakeFetcher(robots = "User-agent: *\nDisallow: /search\nAllow: /rss/sea
     if (u.pathname === "/robots.txt")
       return { status: 200, finalUrl: url, contentType: "text/plain", body: Buffer.from(robots) };
     const q = u.searchParams.get("q") ?? "";
-    const body = q.startsWith("trendyol")
+    const body = q.startsWith("togg")
       ? rss([
-          { title: "Trendyol'dan büyük indirim kampanyası", source: "Hürriyet", id: "a1" },
-          { title: "Trendyol'da erişim sorunu yaşandı", source: "NTV", id: "a2" },
+          { title: "Togg'dan ekim ayına özel kampanya", source: "Hürriyet", id: "a1" },
+          { title: "Togg T6X teslimatları başladı", source: "NTV", id: "a2" },
           { title: "E-ticarette yeni dönem", source: "Sabah", id: "a3" }, // terim yok → alınmaz
         ])
       : rss([]);
@@ -92,7 +92,7 @@ describe.skipIf(!URL_)("Google Haberler araması entegrasyonu", () => {
       .where(eq(dataProviders.key, "google_trends"))
       .returning({ id: dataProviders.id });
     await db.insert(trendSignals).values(
-      ["trendyol", "sözcü", "deprem"].map((term, i) => ({
+      ["togg", "trendyol", "sözcü", "deprem", "adana deprem"].map((term, i) => ({
         providerId: trends!.id,
         term,
         geo: "TR",
@@ -116,23 +116,24 @@ describe.skipIf(!URL_)("Google Haberler araması entegrasyonu", () => {
     expect(f.calls.every((c) => c.endsWith("/robots.txt"))).toBe(true);
   });
 
-  it("güncel trend terimleri aranır (medya adı hariç); yalnızca başlığında terim geçen haberler alınır", async () => {
+  it("güncel trend terimleri aranır (elenen aramalar hariç); yalnızca başlığında terim geçen haberler alınır", async () => {
     const f = fakeFetcher();
     const r = await runProvider(deps(f.fn), "google_news_search", { force: true });
     expect(r.status).toBe("success");
     const searchedTerms = f.calls
       .filter((c) => c.includes("/rss/search"))
       .map((c) => new URL(c).searchParams.get("q"));
-    expect(searchedTerms.sort()).toEqual(["deprem when:1d", "trendyol when:1d"]);
-    const links = await db
-      .select()
-      .from(trendNewsLinks)
-      .where(eq(trendNewsLinks.trendKey, "trendyol"));
+    expect(searchedTerms.sort()).toEqual([
+      '"adana deprem" when:1d',
+      "deprem when:1d",
+      "togg when:1d",
+    ]);
+    const links = await db.select().from(trendNewsLinks).where(eq(trendNewsLinks.trendKey, "togg"));
     expect(links).toHaveLength(2);
     const [s] = await db
       .select()
       .from(trendNewsSearches)
-      .where(eq(trendNewsSearches.trendKey, "trendyol"));
+      .where(eq(trendNewsSearches.trendKey, "togg"));
     expect(s?.resultCount).toBe(2);
   });
 
@@ -144,13 +145,13 @@ describe.skipIf(!URL_)("Google Haberler araması entegrasyonu", () => {
     expect(f.calls.filter((c) => c.includes("/rss/search"))).toHaveLength(0);
   });
 
-  it("bulunan haberler trend konusunu açıklar: kaynaklı başlık ve açıklananlar arasında sıra", async () => {
+  it("bulunan haberler trend konusunu açıklar; açıklanamayan tek kelime gösterilmez", async () => {
     await buildTopics({ db, client, log: silent, now: () => NOW });
-    const [trendyol] = await db.select().from(topics).where(eq(topics.title, "Trendyol"));
-    expect(trendyol).toBeDefined();
-    expect(
-      await db.select().from(topicItems).where(eq(topicItems.topicId, trendyol!.id)),
-    ).toHaveLength(2);
+    const [togg] = await db.select().from(topics).where(eq(topics.title, "Togg"));
+    expect(togg).toBeDefined();
+    expect(await db.select().from(topicItems).where(eq(topicItems.topicId, togg!.id))).toHaveLength(
+      2,
+    );
 
     const app = await buildApp({
       repo: createTopicRepository(db),
@@ -159,8 +160,9 @@ describe.skipIf(!URL_)("Google Haberler araması entegrasyonu", () => {
       logLevel: "silent",
     });
     const list = TopicListResponseSchema.parse((await app.inject("/api/v1/topics")).json());
-    // Trendyol aramada daha düşük ama açıklandığı için açıklanamayan "Deprem"in önünde
-    expect(list.items.map((t) => t.title)).toEqual(["Trendyol", "Deprem"]);
+    // "deprem" tek kelime ve haberi yok → gösterilmez; "adana deprem" haberi olmasa da gösterilir
+    // ama açıklanan "Togg"un altında sıralanır
+    expect(list.items.map((t) => t.title)).toEqual(["Togg", "Adana Deprem"]);
     expect(list.items[0]?.headline?.source).toMatch(/Hürriyet|NTV/);
     expect(list.items[0]?.headline?.title).not.toContain(" - ");
     await app.close();

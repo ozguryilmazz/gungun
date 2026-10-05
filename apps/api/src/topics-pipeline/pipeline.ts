@@ -30,6 +30,7 @@ import type postgres from "postgres";
 import { urlHash } from "../ingest/normalize.ts";
 import type { Logger } from "../ingest/types.ts";
 import { inferCategory } from "./category.ts";
+import { FILTER_REASON_LABELS, classifyTerm } from "./term-filter.ts";
 import {
   clusterItems,
   distinctPublishers,
@@ -38,6 +39,9 @@ import {
   type ClusterInput,
 } from "./cluster.ts";
 import { calmTitle, isMediaTerm, isTermWithCase, slugify, tokenize, words } from "./text.ts";
+
+/** Filtreyle gizlenen konuların "reasons" alanındaki işaret (elle gizlenenlerden ayırmak için) */
+export const FILTER_MARK = "Filtre: ";
 
 /** Konu oluşturma ve yaşam döngüsü eşikleri */
 export const RULES = {
@@ -95,6 +99,8 @@ export interface PipelineResult {
   published: number;
   cooling: number;
   archived: number;
+  /** Gündem başlığı olamayacağı için elenen arama sayısı */
+  filtered: number;
 }
 
 export interface PipelineDeps {
@@ -480,6 +486,7 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
     published: 0,
     cooling: 0,
     archived: 0,
+    filtered: 0,
   };
 
   const conn = await deps.client.reserve();
@@ -599,7 +606,7 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
       })),
       now,
       trendsAvailable,
-    ).filter((t) => !isMediaTerm(t.term) && t.tokens.length > 0);
+    ).filter((t) => t.tokens.length > 0);
 
     const categoryIds = new Map(
       (await db.select({ id: categories.id, slug: categories.slug }).from(categories)).map((c) => [
@@ -632,6 +639,7 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
             publishedAt: topics.publishedAt,
             summaryOrigin: topics.summaryOrigin,
             categoryId: topics.categoryId,
+            reasons: topics.reasons,
           })
           .from(topics)
           .where(
@@ -647,11 +655,32 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
       : [];
     const trendTopicByKey = new Map(existingTrendTopics.map((t) => [t.trendKey!, t]));
 
+    /** Filtreye takılan aramanın konusu gizlenir (filtre değişirse geri açılabilsin diye işaretli) */
+    const hideFiltered = async (
+      existing: { id: string; status: string } | undefined,
+      label: string,
+    ) => {
+      result.filtered++;
+      if (!existing) return;
+      processed.add(existing.id);
+      if (existing.status === "hidden") return;
+      await db
+        .update(topics)
+        .set({ status: "hidden", reasons: [`${FILTER_MARK}${label}`], updatedAt: now })
+        .where(eq(topics.id, existing.id));
+    };
+
     for (const trend of trends) {
       const existing = trendTopicByKey.get(trend.key);
       // Listeden çıkmış ve hiç konu açılmamış terim için konu açılmaz
       if (!existing && !trend.current) continue;
-      if (trend.current) result.trends++;
+
+      // Gündem başlığı olamayacak aramalar (site adı, canlı yayın, hava durumu…) hiç konu olmaz
+      const verdict = classifyTerm(trend.term);
+      if (verdict.verdict === "exclude") {
+        await hideFiltered(existing, FILTER_REASON_LABELS[verdict.reason!]);
+        continue;
+      }
 
       // Google'ın "ilgili haberleri" + Google Haberler aramasında bulunanlar; bazen alakasızdır:
       // yalnızca başlığında terim geçenler kullanılır
@@ -661,12 +690,26 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
         .filter((r) => !seenUrls.has(r.url) && seenUrls.add(r.url))
         .slice(0, 15);
       const cluster = bestClusterForTrend(clusters, trend);
-      if (cluster) claimedClusters.add(cluster);
       const newsItems = cluster?.items ?? [];
+      // Tek kelimelik genel arama ("zeytin", "kredi") yalnızca bir haber açıklıyorsa konu olur
+      if (
+        verdict.verdict === "needs_news" &&
+        newsItems.length === 0 &&
+        trend.related.length === 0
+      ) {
+        await hideFiltered(existing, FILTER_REASON_LABELS.single_word);
+        continue;
+      }
+      if (cluster) claimedClusters.add(cluster);
+      if (trend.current) result.trends++;
 
       await db.transaction(async (tx) => {
         let topicId = existing?.id;
-        const current: Status = (existing?.status as Status | undefined) ?? "candidate";
+        let current: Status = (existing?.status as Status | undefined) ?? "candidate";
+        // Daha önce filtreyle gizlenmiş ama artık geçen arama yeniden açılır (elle gizlenen açılmaz)
+        if (current === "hidden" && existing?.reasons[0]?.startsWith(FILTER_MARK)) {
+          current = existing.publishedAt ? "published" : "candidate";
+        }
         if (!topicId) {
           const title = displayTerm(trend.term, [
             ...newsItems.map((i) => i.title),

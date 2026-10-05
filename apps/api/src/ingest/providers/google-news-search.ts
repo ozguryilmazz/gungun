@@ -8,7 +8,7 @@ import {
 import { eq, inArray, sql } from "drizzle-orm";
 import { checkRobots } from "../../lib/robots.ts";
 import { titleMentionsTerm, trendKey } from "../../topics-pipeline/pipeline.ts";
-import { isMediaTerm } from "../../topics-pipeline/text.ts";
+import { classifyTerm } from "../../topics-pipeline/term-filter.ts";
 import { describeError } from "../errors.ts";
 import { parseFeed } from "../feed-parser.ts";
 import { urlHash } from "../normalize.ts";
@@ -98,7 +98,8 @@ export const googleNewsSearchProvider: IngestProvider = {
     const candidates = new Map<string, { term: string; traffic: number }>();
     for (const r of termRows) {
       const key = trendKey(r.term);
-      if (!key || isMediaTerm(r.term) || candidates.has(key)) continue;
+      // Elenen aramalar (site adı, canlı yayın, hava durumu…) için arama yapılmaz
+      if (!key || classifyTerm(r.term).verdict === "exclude" || candidates.has(key)) continue;
       candidates.set(key, { term: r.term.trim(), traffic: Number(r.traffic ?? 0) });
     }
     if (candidates.size === 0) return { status: "success" as const, itemsFetched: 0, details: [] };

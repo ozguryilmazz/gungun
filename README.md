@@ -71,6 +71,7 @@ pnpm dev
 
 ```powershell
 pnpm fetch:once all   # her kaynağın sonucunu tek tek gösterir
+pnpm trends:filter    # son trend listesinde hangi arama neden elendi
 pnpm providers enable rss_news
 pnpm providers enable google_trends
 pnpm providers enable google_news_search

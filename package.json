@@ -30,7 +30,8 @@
     "fetch:once": "pnpm --filter @gundemci/api fetch:once",
     "providers": "pnpm --filter @gundemci/api providers",
     "feed:inspect": "pnpm --filter @gundemci/api feed:inspect",
-    "topics:build": "pnpm --filter @gundemci/api topics:build"
+    "topics:build": "pnpm --filter @gundemci/api topics:build",
+    "trends:filter": "pnpm --filter @gundemci/api trends:filter"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

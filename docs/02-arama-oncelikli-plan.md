@@ -141,3 +141,22 @@ Sonraki aşamaların numaraları birer kayar: güvenlik sertleştirme 11, SEO 12
   - Veritabanı: `trend_news_links` (terim ↔ haber) ve `trend_news_searches` (son arama zamanı), migration `0004_trend_news`.
 - **Pipeline:** Bulunan haberler Google’ın ilgili haberleriyle birlikte trend konusuna bağlanır; kart başlığı ve “Neden gündemde?” kaynakları bunlardan gelir.
 - **Değerlendirilip reddedilenler:** pytrends ve ücretli SERP servisleri (SerpApi vb.) Google’ı kazıyıp bot korumasını aştığı için kullanılmaz. Google Trends API (alpha) şimdilik beklemede.
+
+### Arama filtresi (gündem başlığı olamayacak aramalar)
+
+Kural tabanlı (`apps/api/src/topics-pipeline/term-filter.ts`), yapay zekâ yok:
+
+| Karar                    | Örnekler                                                                                                        |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Elenir: site/marka/kanal | memurlar net, mynet, milliyet, sözcü gazetesi, trendyol, transfermarkt, trt spor, alan adı yazılmış aramalar    |
+| Elenir: canlı yayın      | “… canlı”, “… canlı izle”, “… izle”                                                                             |
+| Elenir: rutin hizmet     | “… hava durumu”, imsak, yatsı namazı, “… fiyatı/fiyatları”, faiz oranları, “hangi diziler var”, “… çöktü mü”    |
+| Elenir: yasa dışı        | betplay ve benzeri bahis siteleri, iptv, korsan maç yayınları                                                   |
+| Elenir: yabancı dil      | Latin dışı alfabeler, “… vs …”, Almanca maç adları, İngilizce genel kelimeler                                   |
+| Elenir: tarih/gün        | 2026, pazartesi, 3 ekim                                                                                         |
+| Yalnızca haberle         | Tek kelimelik aramalar (zeytin, kredi, osimhen): aramayı açıklayan bir haber varsa konu olur, yoksa gösterilmez |
+
+- Elenen aramalar silinmez (trend_signals’ta kalır). `pnpm trends:filter` son listedeki her aramanın kararını gösterir.
+- Filtreden önce açılmış konular gizlenir (`reasons` alanında “Filtre: …” işaretiyle). Filtre değişirse ya da tek kelimelik arama haberle açıklanırsa konu yeniden açılır; elle gizlenen konular açılmaz.
+- Elenen aramalar için Google Haberler’de arama yapılmaz.
+- Liste 10. aşamada admin panelinden düzenlenebilir hâle gelecek.

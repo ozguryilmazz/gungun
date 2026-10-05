@@ -163,8 +163,20 @@ describe.skipIf(!URL_)("YouTube entegrasyonu", () => {
       .set({ lastSuccessAt: now })
       .where(eq(dataProviders.key, "youtube_trending"));
     await db.insert(trendSignals).values([
-      { providerId: trends!.id, term: "derbi", geo: "TR", approxTraffic: 50000, observedAt: now },
-      { providerId: trends!.id, term: "deprem", geo: "TR", approxTraffic: 20000, observedAt: now },
+      {
+        providerId: trends!.id,
+        term: "fenerbahçe galatasaray",
+        geo: "TR",
+        approxTraffic: 50000,
+        observedAt: now,
+      },
+      {
+        providerId: trends!.id,
+        term: "adana deprem",
+        geo: "TR",
+        approxTraffic: 20000,
+        observedAt: now,
+      },
     ]);
     await buildTopics({ db, client, log: silent, now: () => now });
 
@@ -178,11 +190,11 @@ describe.skipIf(!URL_)("YouTube entegrasyonu", () => {
         .limit(1);
       return { topic: t!, social: snap!.components.social };
     };
-    const derbi = await social("Derbi");
+    const derbi = await social("Fenerbahçe Galatasaray");
     expect(derbi.social?.available).toBe(true);
     expect(derbi.social?.normalized).toBe(1);
     expect(derbi.topic.reasons.some((r) => r.includes("YouTube"))).toBe(true);
-    const deprem = await social("Deprem");
+    const deprem = await social("Adana Deprem");
     expect(deprem.social?.available).toBe(true);
     expect(deprem.social?.normalized).toBe(0);
   });
