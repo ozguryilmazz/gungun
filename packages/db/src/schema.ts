@@ -132,8 +132,50 @@ export const fetchRuns = pgTable(
     // Yalnızca temizlenmiş, kullanıcı/secret bilgisi içermeyen hata özeti
     errorCode: varchar("error_code", { length: 64 }),
     errorMessage: varchar("error_message", { length: 500 }),
+    // Kaynak (feed) bazında özet sonuç: [{ name, ok, items, error? }] — secret içermez
+    details: jsonb("details").$type<FetchRunDetail[]>().notNull().default([]),
   },
   (t) => [index("fetch_runs_provider_started_idx").on(t.providerId, t.startedAt.desc())],
+);
+
+export interface FetchRunDetail {
+  name: string;
+  ok: boolean;
+  items: number;
+  error?: string;
+}
+
+/**
+ * Arama trendi gözlemi: bir terimin trend listesinde görüldüğü an.
+ * Her çekmede listedeki terimler kaydedilir; zaman serisi aşama 8'de skora girer.
+ */
+export const trendSignals = pgTable(
+  "trend_signals",
+  {
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    providerId: integer("provider_id")
+      .notNull()
+      .references(() => dataProviders.id, { onDelete: "cascade" }),
+    term: varchar("term", { length: 200 }).notNull(),
+    geo: char("geo", { length: 2 }).notNull(),
+    approxTraffic: integer("approx_traffic"),
+    observedAt: timestamptz("observed_at").notNull(),
+    publishedAt: timestamptz("published_at"),
+    // İlgili haber bağlantıları (en fazla 5): yalnızca başlık, adres, kaynak adı
+    related: jsonb("related")
+      .$type<{ title: string; url: string; source: string }[]>()
+      .notNull()
+      .default([]),
+  },
+  (t) => [
+    uniqueIndex("trend_signals_provider_term_time_uq").on(t.providerId, t.term, t.observedAt),
+    index("trend_signals_observed_idx").on(t.observedAt.desc()),
+    index("trend_signals_term_idx").on(t.term),
+    check(
+      "trend_signals_traffic_positive",
+      sql`${t.approxTraffic} is null or ${t.approxTraffic} >= 0`,
+    ),
+  ],
 );
 
 /** Kaynaklardan gelen tekil içerik. Yalnızca metadata; haber GÖVDESİ SAKLANMAZ. */

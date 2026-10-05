@@ -2,8 +2,8 @@
 
 Türkiye'de internette **ne konuşuluyor, neden gündemde ve ne kadar hızlı yükseliyor** sorusuna yanıt veren gündem analiz platformu.
 
-> Durum: **Aşama 6 — arayüz API'ye bağlı.** Arayüz → API → PostgreSQL zinciri çalışıyor.
-> Gösterilen konular `pnpm db:seed` ile yüklenen ÖRNEK verilerdir; gerçek veri kaynakları aşama 7'de.
+> Durum: **Aşama 7 — veri toplama.** Haber RSS'leri ve Google Trends'ten veri çekme altyapısı hazır.
+> Toplanan veriler henüz gündem konularına dönüştürülmüyor (aşama 8); arayüzde hâlâ ÖRNEK konular görünür.
 > Mimari ve MVP planı: [`docs/01-mimari-plan.md`](docs/01-mimari-plan.md)
 
 ## Gereksinimler
@@ -53,6 +53,25 @@ pnpm dev
 | `pnpm db:up`        | PostgreSQL container'ını başlat |
 | `pnpm db:down`      | PostgreSQL container'ını durdur |
 | `pnpm db:logs`      | PostgreSQL loglarını izle       |
+
+## Veri toplama
+
+- **Sağlayıcılar:** `rss_news` (12 haber sitesinin RSS'i) ve `google_trends` (Türkiye trend RSS'i).
+  Hepsi **kapalı** başlar.
+- **Ne alınır:** Yalnızca başlık, bağlantı ve yayın zamanı. Haber metni alınmaz.
+- **Güvenlik:** Dış istekler yalnızca kayıtlı adreslere gider. İç ağ adresleri, aşırı büyük yanıtlar ve
+  izin dışı yönlendirmeler engellenir.
+- **Dayanıklılık:** Bir kaynak hata verirse diğerleri etkilenmez. Hata tekrarlanırsa o kaynağın deneme
+  aralığı otomatik uzar.
+
+İlk deneme için:
+
+```powershell
+pnpm fetch:once all   # her kaynağın sonucunu tek tek gösterir
+pnpm providers enable rss_news
+pnpm providers enable google_trends
+pnpm worker           # açık sağlayıcıları 10–15 dakikada bir çalıştırır (Ctrl+C ile durur)
+```
 
 ## API (v1)
 

@@ -1,6 +1,6 @@
 # gundemci.org — Mimari ve MVP Planı (v0.1, taslak)
 
-> Durum: **Plan onaylandı (2026-10-05).** Kararlar en alttaki “Alınan kararlar” bölümünde. Aşama 1–6 tamamlandı (iskelet, veritabanı, tasarım, arayüz, backend API, arayüz ↔ API).
+> Durum: **Plan onaylandı (2026-10-05).** Kararlar en alttaki “Alınan kararlar” bölümünde. Aşama 1–7 tamamlandı (iskelet, veritabanı, tasarım, arayüz, backend API, arayüz ↔ API, veri toplama).
 > Tarih: 2026-10-05
 
 ---
@@ -357,7 +357,7 @@ Admin ID’leri UUID; tüm sorgular sahiplik/rol kontrolünden geçer (IDOR önl
 | 4   | İlk çalışan frontend      | Ana sayfa + detay + kategori (seed veriden, “ÖRNEK VERİ” şeridiyle)                                       | ✅          |
 | 5   | Backend API               | Public endpoint’ler, validation, hata yönetimi, cache, rate limit, testler                                | ✅          |
 | 6   | Frontend ↔ API bağlantısı | Mock’tan gerçek API’ye geçiş                                                                              | ✅          |
-| 7   | Veri sağlayıcıları        | Provider arayüzü, safe-http, RSS + Google Trends adapter, worker, `fetch_runs`                            | ✋          |
+| 7   | Veri sağlayıcıları        | Provider arayüzü, safe-http, RSS + Google Trends adapter, worker, `fetch_runs`                            | ✅          |
 | 8   | Pipeline + skor           | Dedupe, basit kümeleme, skor, snapshot, yükselenler/düşenler, arşiv                                       | ✋          |
 | 9   | Admin                     | Auth, konu yönetimi, provider durumu, audit log                                                           | ✋          |
 | 10  | Güvenlik sertleştirme     | Başlıklar/CSP, güvenlik testleri, bağımlılık denetimi                                                     | ✋          |
@@ -461,3 +461,25 @@ Seçim ölçütü: Türkiye’de en çok takip edilen siteler + **farklı yayın
 - Geliştirme ve `start` sunucusu yalnızca `127.0.0.1`’e bağlanır (ağdaki diğer cihazlar erişemez).
 - API’de `RATE_LIMIT_ALLOWLIST` varsayılanı `127.0.0.1,::1` (aynı bilgisayardaki web sunucusu).
 - Kenar çubuğuna “Veri kaynakları” durumu eklendi (tasarımdaki panel); şu an tümü “Henüz bağlanmadı”.
+
+### Aşama 7 notları
+
+- **Güvenli HTTP (`apps/api/src/lib/safe-http.ts`):**
+  - Yalnızca https ve standart port; kimlik bilgisi içeren adresler reddedilir.
+  - Sağlayıcı bazında host allowlist uygulanır; yönlendirme hedefleri de aynı denetimden geçer (en fazla 3).
+  - DNS çözümlemesi bağlantı anında denetlenir; özel, loopback, link-local ve bulut metadata adreslerine bağlanılmaz (DNS rebinding’e karşı).
+  - 15 sn toplam zaman aşımı; 3 MB yanıt sınırı, sıkıştırma açıldıktan sonra da uygulanır (zip bomb).
+- **Ayrıştırıcı:**
+  - RSS 2.0, RSS 1.0 (RDF), Atom ve Google Trends biçimleri desteklenir.
+  - DTD/ENTITY içeren belgeler reddedilir (XXE, billion laughs).
+  - Başlıklar düz metne indirgenir; HTML, kontrol ve yön değiştirme karakterleri temizlenir.
+  - Yalnızca http(s) bağlantılar alınır; izleme parametreleri silinir.
+  - windows-1254 / ISO-8859-9 kodlamalı feed’ler de okunur.
+- **Feed enjeksiyonuna karşı:** Bir yayıncının feed’indeki bağlantı başka bir alan adına gidiyorsa kaydedilmez.
+- **Yeni tablo `trend_signals`:** Bir terimin trend listesinde görüldüğü her an kaydedilir. `fetch_runs.details` alanı kaynak bazında sonucu tutar (migration `0001_ingest`).
+- **Zamanlayıcı:**
+  - Plandaki pg-boss yerine basit bir döngü kullanıldı: dakikada bir kontrol, PostgreSQL advisory lock ile aynı anda tek çalışma.
+  - Ardışık hatalarda bekleme süresi katlanarak uzar (en fazla 6 saat).
+  - Ek bir kuyruk sistemi ancak iş sayısı artınca gerekecek.
+- **Kısmi başarı:** Bir kısım kaynak çalıştıysa sağlayıcı “başarılı” sayılır; hatalı kaynaklar `fetch_runs` kaydında listelenir.
+- **Adres doğrulaması bekliyor:** RSS adresleri geliştirme ortamından doğrulanamadı (ağ politikası). İlk gerçek deneme kullanıcının bilgisayarında `pnpm fetch:once all` ile yapılacak.

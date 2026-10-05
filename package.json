@@ -25,7 +25,10 @@
     "db:logs": "docker compose --env-file .env -f infra/docker-compose.yml logs -f postgres",
     "db:generate": "pnpm --filter @gundemci/db generate",
     "db:migrate": "pnpm --filter @gundemci/db migrate",
-    "db:seed": "pnpm --filter @gundemci/db seed"
+    "db:seed": "pnpm --filter @gundemci/db seed",
+    "worker": "pnpm --filter @gundemci/api worker",
+    "fetch:once": "pnpm --filter @gundemci/api fetch:once",
+    "providers": "pnpm --filter @gundemci/api providers"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

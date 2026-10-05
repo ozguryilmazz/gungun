@@ -20,5 +20,5 @@ export function createDb(databaseUrl: string, options: CreateDbOptions = {}) {
     onnotice: () => {},
   });
   const db = drizzle(client, { schema });
-  return { db, close: () => client.end({ timeout: 5 }) };
+  return { db, client, close: () => client.end({ timeout: 5 }) };
 }

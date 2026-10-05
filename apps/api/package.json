@@ -8,7 +8,10 @@
     "dev": "tsx watch src/server.ts",
     "start": "tsx src/server.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "worker": "tsx src/worker.ts",
+    "fetch:once": "tsx src/cli/fetch-once.ts",
+    "providers": "tsx src/cli/providers.ts"
   },
   "dependencies": {
     "@fastify/helmet": "13.1.1",
@@ -16,7 +19,10 @@
     "@gundemci/db": "workspace:*",
     "@gundemci/shared": "workspace:*",
     "drizzle-orm": "0.45.3",
+    "fast-xml-parser": "5.11.2",
     "fastify": "5.12.5",
+    "pino": "10.4.0",
+    "postgres": "3.4.9",
     "tsx": "4.23.15",
     "zod": "4.6.5"
   },

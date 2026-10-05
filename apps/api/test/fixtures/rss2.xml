@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Örnek Haber - Gündem</title>
+    <link>https://www.ornekhaber.com.tr</link>
+    <item>
+      <title><![CDATA[İstanbul'da <b>yoğun</b> kar yağışı &amp; ulaşım]]></title>
+      <link>https://www.ornekhaber.com.tr/gundem/kar-yagisi-123?utm_source=rss&amp;utm_medium=feed#yorumlar</link>
+      <description><![CDATA[<p>Bu metin SAKLANMAMALI.</p>]]></description>
+      <pubDate>Mon, 05 Oct 2026 08:15:00 +0300</pubDate>
+    </item>
+    <item>
+      <title>Ekonomi: Faiz kararı açıklandı</title>
+      <link>https://ornekhaber.com.tr/ekonomi/faiz-456</link>
+      <pubDate>geçersiz tarih</pubDate>
+    </item>
+    <item>
+      <title>Zararlı bağlantı</title>
+      <link>javascript:alert(document.cookie)</link>
+    </item>
+    <item>
+      <title>Başka siteye yönlendiren haber</title>
+      <link>https://kotu-site.example/tuzak</link>
+    </item>
+    <item>
+      <title></title>
+      <link>https://www.ornekhaber.com.tr/bos-baslik</link>
+    </item>
+  </channel>
+</rss>

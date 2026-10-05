@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Atom</title>
+  <entry>
+    <title type="html">Atom &amp;lt;i&amp;gt;haberi&amp;lt;/i&amp;gt;</title>
+    <link rel="enclosure" href="https://www.ornekhaber.com.tr/resim.jpg"/>
+    <link rel="alternate" href="https://www.ornekhaber.com.tr/atom-haber"/>
+    <updated>2026-10-05T07:00:00Z</updated>
+  </entry>
+</feed>
