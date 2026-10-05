@@ -2,6 +2,8 @@ import type { StatusResponse, TopicListResponse, YoutubeListResponse } from "@gu
 import { CHANGE_WINDOW_HOURS } from "@gundemci/shared";
 import Link from "next/link";
 import { formatDate, formatRelative } from "@/lib/format";
+import { listSignature } from "@/lib/refresh";
+import { AutoRefresh } from "./AutoRefresh";
 import { CategoryNav } from "./CategoryNav";
 import { MockBanner } from "./MockBanner";
 import { MovementList } from "./MovementList";
@@ -45,6 +47,11 @@ export function TopicFeed({
   return (
     <>
       <MockBanner show={isMock} />
+      <AutoRefresh
+        slugs={list.items.map((t) => t.slug)}
+        signature={listSignature(list.items)}
+        category={activeCategory}
+      />
       <div className={`container ${styles.layout}`}>
         <main id="icerik" className={styles.main}>
           <div className={styles.intro}>

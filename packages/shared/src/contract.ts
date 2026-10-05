@@ -56,6 +56,8 @@ export const TopicSummarySchema = z.object({
       sinceHours: z.number().int().min(0),
     })
     .nullable(),
+  /** Son 24 saatin saatlik skorları (eskiden yeniye; her saatin son ölçümü) — mini grafik için */
+  sparkline: z.array(score).max(25),
   summary: z.string().max(1200).nullable(),
   updatedAt: isoDate,
   isMock: z.boolean(),

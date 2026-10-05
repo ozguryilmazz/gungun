@@ -41,3 +41,32 @@ describe("formatSearchVolume", () => {
     );
   });
 });
+
+describe("kendiliğinden güncelleme", () => {
+  it("imza sıra veya skor değişince değişir; yeni giren konular bulunur", async () => {
+    const { listSignature, newSlugs } = await import("../src/lib/refresh");
+    const a = listSignature([
+      { slug: "x", score: 50 },
+      { slug: "y", score: 40 },
+    ]);
+    expect(
+      listSignature([
+        { slug: "x", score: 50 },
+        { slug: "y", score: 40 },
+      ]),
+    ).toBe(a);
+    expect(
+      listSignature([
+        { slug: "y", score: 40 },
+        { slug: "x", score: 50 },
+      ]),
+    ).not.toBe(a);
+    expect(
+      listSignature([
+        { slug: "x", score: 51 },
+        { slug: "y", score: 40 },
+      ]),
+    ).not.toBe(a);
+    expect(newSlugs(["x", "y"], ["z", "x", "y"])).toEqual(["z"]);
+  });
+});

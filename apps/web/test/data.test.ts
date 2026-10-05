@@ -24,6 +24,7 @@ const summary = {
   signalsTotal: 4,
   sourceCount: 4,
   searchVolume: { approxTraffic: 50000, sinceHours: 3 },
+  sparkline: [55, 70, 92],
   summary: "Bu bir örnek konudur.",
   updatedAt: NOW,
   isMock: true,

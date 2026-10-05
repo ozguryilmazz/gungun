@@ -271,6 +271,8 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
     expect(trends.items[0]?.title).toBe("Derbi"); // en yüksek arama hacmi
     // Google'ın yaklaşık arama sayısı; liste 5 dk önce, konu da o an açıldı → 0 saat
     expect(trends.items[0]?.searchVolume).toEqual({ approxTraffic: 50000, sinceHours: 0 });
+    // Mini grafik: şimdiye kadar saat başına son skor (iki çalıştırma aynı saatte → tek nokta)
+    expect(trends.items[0]?.sparkline).toEqual([trends.items[0]?.score]);
     expect(trends.items[0]?.headline?.source).toBe("Spor Sitesi");
     const news = TopicListResponseSchema.parse(
       (await app.inject("/api/v1/topics?kind=news")).json(),

@@ -27,6 +27,8 @@ export interface TopicRow {
   sourceCount: number;
   /** Google'ın yaklaşık arama sayısı + listede geçen süre (yalnızca şu an listedeki trend konuları) */
   searchVolume: { approxTraffic: number; sinceHours: number } | null;
+  /** Son 24 saatin saatlik skorları (eskiden yeniye) */
+  sparkline: number[];
 }
 
 export interface TopicDetailRow extends TopicRow {
@@ -111,6 +113,7 @@ type RawTopic = {
   signals_available: number | null;
   signals_total: number | null;
   latest_components: ScoreComponents | null;
+  sparkline: (number | string)[] | null;
   prev_at: Date | null;
   prev_score: number | null;
   source_count: number;
@@ -161,6 +164,10 @@ function mapTopic(r: RawTopic): TopicRow {
     previous: r.prev_at === null ? null : { capturedAt: asDate(r.prev_at), score: r.prev_score },
     sourceCount: Number(r.source_count),
     searchVolume: searchVolume(r),
+    sparkline: (r.sparkline ?? [])
+      .map(Number)
+      .filter((n) => Number.isInteger(n) && n >= 0 && n <= 100)
+      .slice(-25),
   };
 }
 
@@ -186,7 +193,8 @@ function topicSelect(windowMinutes: number) {
            l.captured_at as latest_at, l.score as latest_score,
            l.signals_available, l.signals_total, l.components as latest_components,
            p.captured_at as prev_at, p.score as prev_score,
-           (select count(*)::int from topic_items ti where ti.topic_id = t.id) as source_count
+           (select count(*)::int from topic_items ti where ti.topic_id = t.id) as source_count,
+           sp.sparkline
     from topics t
     join categories c on c.id = t.category_id
     left join lateral (
@@ -204,6 +212,19 @@ function topicSelect(windowMinutes: number) {
       order by s.captured_at desc
       limit 1
     ) p on true
+    left join lateral (
+      -- Mini grafik: son 24 saatte her saatin son skoru
+      select json_agg(x.score order by x.hour) as sparkline
+      from (
+        select distinct on (date_trunc('hour', s.captured_at))
+               date_trunc('hour', s.captured_at) as hour, s.score
+        from topic_snapshots s
+        where s.topic_id = t.id
+          and s.score is not null
+          and s.captured_at > l.captured_at - interval '24 hours'
+        order by date_trunc('hour', s.captured_at), s.captured_at desc
+      ) x
+    ) sp on true
     left join lateral (
       select json_agg(json_build_object('title', x.title, 'source', x.source, 'url', x.url)) as h_candidates
       from (

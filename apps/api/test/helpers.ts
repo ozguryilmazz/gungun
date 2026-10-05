@@ -27,6 +27,7 @@ export function topicRow(overrides: Partial<TopicRow> & { slug: string }): Topic
     previous: { capturedAt: minutesAgo(185), score: 50 },
     sourceCount: 3,
     searchVolume: null,
+    sparkline: [40, 45, 50],
     ...overrides,
   };
 }

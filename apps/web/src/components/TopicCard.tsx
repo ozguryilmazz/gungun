@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { TopicSummary } from "@gundemci/shared";
 import { formatRelative, formatSearchVolume } from "@/lib/format";
 import { ScoreBar } from "./ScoreBar";
+import { Sparkline } from "./Sparkline";
 import { TrendBadge } from "./TrendBadge";
 import styles from "./TopicCard.module.css";
 
@@ -26,6 +27,7 @@ export function TopicCard({ topic, now }: { topic: TopicSummary; now: Date }) {
       </span>
       <span className={styles.title}>{topic.title}</span>
       <span className={styles.bar}>
+        <Sparkline values={topic.sparkline} />
         <ScoreBar value={topic.score} />
       </span>
       <span className={styles.trend}>

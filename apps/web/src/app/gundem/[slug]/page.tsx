@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { CHANGE_WINDOW_HOURS, TIMELINE_LABELS } from "@gundemci/shared";
 import { MockBanner } from "@/components/MockBanner";
 import { ScoreBar } from "@/components/ScoreBar";
+import { ShareButtons } from "@/components/ShareButtons";
 import { TrendBadge } from "@/components/TrendBadge";
 import { getTopic } from "@/lib/data";
 import { formatClock, formatRelative } from "@/lib/format";
@@ -19,9 +20,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const result = await getTopic((await params).slug);
   if (!result) return {};
   const { item } = result;
+  const description = item.summary ?? `${item.title} neden gündemde? Kaynaklar ve gündem skoru.`;
   return {
     title: `${item.title} — Neden gündemde?`,
-    description: item.summary ?? `${item.title} neden gündemde? Kaynaklar ve gündem skoru.`,
+    description,
+    openGraph: {
+      type: "article",
+      title: `${item.title} — Neden gündemde?`,
+      description,
+      url: `/gundem/${item.slug}`,
+    },
+    twitter: { card: "summary_large_image", title: `${item.title} — Neden gündemde?`, description },
   };
 }
 
@@ -73,6 +82,7 @@ export default async function TopicPage({ params }: Props) {
             İlk görülme {formatClock(topic.firstSeenAt)} · Son güncelleme{" "}
             {formatRelative(topic.updatedAt, now)}
           </p>
+          <ShareButtons path={`/gundem/${topic.slug}`} text={`${topic.title} — neden gündemde?`} />
         </header>
 
         <div className={styles.columns}>

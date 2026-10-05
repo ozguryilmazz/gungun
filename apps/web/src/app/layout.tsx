@@ -6,7 +6,20 @@ import "./globals.css";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 
+/** Paylaşım bağlantıları ve görselleri için sitenin tam adresi (canlıda https://gundemci.org) */
+function siteUrl(): URL {
+  try {
+    const url = new URL(process.env.SITE_URL?.trim() || "http://localhost:3000");
+    return ["http:", "https:"].includes(url.protocol) ? url : new URL("http://localhost:3000");
+  } catch {
+    return new URL("http://localhost:3000");
+  }
+}
+
 export const metadata: Metadata = {
+  metadataBase: siteUrl(),
+  openGraph: { siteName: "gündemci", locale: "tr_TR", type: "website" },
+  twitter: { card: "summary_large_image" },
   title: {
     default: "gündemci — Türkiye’de şu anda ne konuşuluyor?",
     template: "%s | gündemci",

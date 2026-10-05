@@ -5,7 +5,7 @@ import type { NextConfig } from "next";
 
 // Kök dizindeki ortak .env'den YALNIZCA web sunucusunun ihtiyaç duyduğu sunucu tarafı
 // değişkenleri alınır. NEXT_PUBLIC_ önekli değişken yok: hiçbir ayar tarayıcıya gönderilmez.
-const SERVER_ENV_KEYS = ["API_INTERNAL_URL"] as const;
+const SERVER_ENV_KEYS = ["API_INTERNAL_URL", "SITE_URL"] as const;
 const rootEnvPath = resolve(process.cwd(), "../../.env");
 if (existsSync(rootEnvPath)) {
   const parsed = parseEnv(readFileSync(rootEnvPath, "utf8"));
