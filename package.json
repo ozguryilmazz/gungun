@@ -9,7 +9,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "pnpm --parallel --filter @gundemci/web --filter @gundemci/api dev",
+    "dev": "pnpm --parallel --no-bail --filter @gundemci/web --filter @gundemci/api dev",
     "dev:web": "pnpm --filter @gundemci/web dev",
     "dev:api": "pnpm --filter @gundemci/api dev",
     "build": "pnpm --filter @gundemci/web build",
