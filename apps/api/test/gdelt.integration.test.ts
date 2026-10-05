@@ -180,4 +180,33 @@ describe.skipIf(!URL_)("GDELT entegrasyonu", () => {
     expect(list.items[0]?.headline?.source).toMatch(/Hürriyet|NTV/);
     await app.close();
   });
+
+  it("429 alınırsa aynı arama bir kez daha denenir; yine 429 ise tur durur", async () => {
+    await db.delete(trendNewsSearches);
+    const calls: string[] = [];
+    let searches = 0;
+    const flaky: Fetcher = async (url) => {
+      calls.push(url);
+      if (url.endsWith("/robots.txt")) throw new SafeFetchError("http_error", "HTTP 404", 404);
+      searches++;
+      // 1. arama: önce 429, tekrar denemede başarılı; 2. arama: iki kez 429
+      if (searches === 1 || searches >= 3)
+        return {
+          status: 200,
+          finalUrl: url,
+          contentType: "text/plain",
+          body: Buffer.from("Please limit requests to one every 5 seconds."),
+        };
+      return {
+        status: 200,
+        finalUrl: url,
+        contentType: "application/json",
+        body: Buffer.from("{}"),
+      };
+    };
+    const r = await runProvider(deps(flaky), "gdelt_news", { force: true });
+    expect(r.status).toBe("partial");
+    expect(r.details.map((d) => d.ok)).toEqual([true, false]);
+    expect(searches).toBe(4); // 1+1 (başarılı) + 2 (vazgeçildi), kalan terim aranmadı
+  });
 });

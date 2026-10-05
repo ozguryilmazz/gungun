@@ -15,6 +15,7 @@ import {
 } from "@gundemci/db";
 import { eq, inArray, sql } from "drizzle-orm";
 import { checkRobots } from "../lib/robots.ts";
+import { SafeFetchError } from "../lib/safe-http.ts";
 import { titleMentionsTerm, trendKey } from "../topics-pipeline/pipeline.ts";
 import { classifyTerm } from "../topics-pipeline/term-filter.ts";
 import { describeError } from "./errors.ts";
@@ -47,6 +48,8 @@ export interface NewsSearchOptions {
   /** Bu kaynakta aranamayacak terimler (ör. çok kısa) */
   skipTerm?: (term: string) => boolean;
 }
+
+const isRateLimited = (error: unknown) => error instanceof SafeFetchError && error.status === 429;
 
 export const num = (v: unknown, fallback: number, min: number, max: number) =>
   typeof v === "number" && Number.isFinite(v)
@@ -141,16 +144,31 @@ export async function runTrendNewsSearch(
   let failures = 0;
   const oldest = new Date(now.getTime() - MAX_AGE_HOURS * 3_600_000);
 
-  for (const [i, [key, { term }]] of due.entries()) {
-    if (i > 0 && delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const search = async (term: string) => {
+    const res = await fetcher(opts.searchUrl(term), {
+      isHostAllowed: (h) => h === opts.host,
+      userAgent,
+      ...(opts.accept ? { accept: opts.accept } : {}),
+    });
+    return opts.parse(res.body, res.contentType, now);
+  };
+  // Sınır aşıldıysa (429) daha uzun beklenip aynı arama bir kez daha denenir
+  const searchWithRetry = async (term: string) => {
     try {
-      const res = await fetcher(opts.searchUrl(term), {
-        isHostAllowed: (h) => h === opts.host,
-        userAgent,
-        ...(opts.accept ? { accept: opts.accept } : {}),
-      });
-      const items = opts
-        .parse(res.body, res.contentType, now)
+      return await search(term);
+    } catch (error) {
+      if (!isRateLimited(error)) throw error;
+      if (delayMs > 0) await sleep(Math.max(delayMs * 2, 10_000));
+      return search(term);
+    }
+  };
+
+  for (const [key, { term }] of due) {
+    // İlk aramadan önce de beklenir: robots.txt isteği de kaynağın sınırına sayılabilir
+    if (delayMs > 0) await sleep(delayMs);
+    try {
+      const items = (await searchWithRetry(term))
         // Yalnızca başlığında terim geçen ve güncel olan haberler aramayı açıklayabilir
         .filter((it) => titleMentionsTerm(it.title, term))
         .filter((it) => !it.publishedAt || it.publishedAt >= oldest)
@@ -210,8 +228,8 @@ export async function runTrendNewsSearch(
         items: 0,
         error: `${code}: ${message}`,
       });
-      // Kaynak istekleri sınırlıyorsa (429) bu çalışmada daha fazla istek atılmaz
-      if (message === "HTTP 429") break;
+      // Kaynak istekleri hâlâ sınırlıyorsa (429) bu çalışmada daha fazla istek atılmaz
+      if (isRateLimited(error)) break;
     }
   }
 
