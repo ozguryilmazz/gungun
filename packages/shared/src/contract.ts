@@ -46,6 +46,16 @@ export const TopicSummarySchema = z.object({
   signalsAvailable: z.number().int().min(0),
   signalsTotal: z.number().int().min(0),
   sourceCount: z.number().int().min(0),
+  /**
+   * Trend konusunda Google'ın verdiği YAKLAŞIK arama sayısı ("50.000+") ve konunun kaç saattir
+   * trend listesinde olduğu. Yalnızca arama şu an listedeyse; aksi hâlde null.
+   */
+  searchVolume: z
+    .object({
+      approxTraffic: z.number().int().positive(),
+      sinceHours: z.number().int().min(0),
+    })
+    .nullable(),
   summary: z.string().max(1200).nullable(),
   updatedAt: isoDate,
   isMock: z.boolean(),

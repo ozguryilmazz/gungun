@@ -17,6 +17,8 @@ export interface AppOptions {
   rateLimitAllowList?: string[];
   trustProxy?: boolean;
   logLevel?: string;
+  /** Yalnızca testler için: sabit saat */
+  clock?: () => Date;
 }
 
 export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
@@ -85,7 +87,7 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
     return sendError(reply, "internal_error");
   });
 
-  const service = new TopicService(opts.repo, opts.cacheTtlSeconds);
+  const service = new TopicService(opts.repo, opts.cacheTtlSeconds, opts.clock);
 
   await app.register(healthRoutes, { repo: opts.repo });
   await app.register(

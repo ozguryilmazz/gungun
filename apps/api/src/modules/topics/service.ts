@@ -51,6 +51,7 @@ function toSummary(row: TopicRow, rank: number | null): TopicSummary {
     signalsAvailable: row.latest?.signalsAvailable ?? 0,
     signalsTotal: row.latest?.signalsTotal ?? COMPONENT_KEYS.length,
     sourceCount: row.sourceCount,
+    searchVolume: row.searchVolume,
     summary: row.summary,
     updatedAt: (row.latest?.capturedAt ?? row.topicUpdatedAt).toISOString(),
     isMock: row.isMock,

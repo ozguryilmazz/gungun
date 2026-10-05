@@ -9,7 +9,7 @@ import {
 import type { FastifyInstance } from "fastify";
 import { afterEach, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.ts";
-import { fakeRepo, type FakeRepo } from "./helpers.ts";
+import { NOW, fakeRepo, type FakeRepo } from "./helpers.ts";
 
 let app: FastifyInstance | undefined;
 
@@ -22,6 +22,7 @@ async function setup(
     cacheTtlSeconds: extra.cacheTtlSeconds ?? 30,
     rateLimitMax: extra.rateLimitMax ?? 1000,
     logLevel: "silent",
+    clock: () => NOW,
   });
   return { app, repo };
 }

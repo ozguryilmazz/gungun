@@ -73,3 +73,12 @@ export function formatIsoDay(day: string): string {
 export function istanbulToday(now: Date = new Date()): string {
   return new Date(now.getTime() + 3 * 3_600_000).toISOString().slice(0, 10);
 }
+
+/**
+ * Google'ın yaklaşık arama sayısı: "Yaklaşık 3 saatte 50.000+ arama".
+ * Değer Google Trends'in yuvarlanmış tahminidir (kesin sayı değil).
+ */
+export function formatSearchVolume(v: { approxTraffic: number; sinceHours: number }): string {
+  const count = `${v.approxTraffic.toLocaleString("tr-TR")}+ arama`;
+  return v.sinceHours < 1 ? `Son 1 saatte ${count}` : `Yaklaşık ${v.sinceHours} saatte ${count}`;
+}

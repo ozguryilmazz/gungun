@@ -26,6 +26,7 @@ export function topicRow(overrides: Partial<TopicRow> & { slug: string }): Topic
     latest: { capturedAt: minutesAgo(5), score: 50, signalsAvailable: 3, signalsTotal: 4 },
     previous: { capturedAt: minutesAgo(185), score: 50 },
     sourceCount: 3,
+    searchVolume: null,
     ...overrides,
   };
 }

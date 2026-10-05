@@ -25,6 +25,8 @@ export interface TopicRow {
   latest: (SnapshotRef & { signalsAvailable: number; signalsTotal: number }) | null;
   previous: SnapshotRef | null;
   sourceCount: number;
+  /** Google'ın yaklaşık arama sayısı + listede geçen süre (yalnızca şu an listedeki trend konuları) */
+  searchVolume: { approxTraffic: number; sinceHours: number } | null;
 }
 
 export interface TopicDetailRow extends TopicRow {
@@ -158,7 +160,20 @@ function mapTopic(r: RawTopic): TopicRow {
           },
     previous: r.prev_at === null ? null : { capturedAt: asDate(r.prev_at), score: r.prev_score },
     sourceCount: Number(r.source_count),
+    searchVolume: searchVolume(r),
   };
+}
+
+/** Son skor kaydındaki arama ilgisi: ham değer Google'ın yaklaşık arama sayısıdır */
+function searchVolume(r: RawTopic): TopicRow["searchVolume"] {
+  const c = r.latest_components?.search_interest;
+  if (r.kind !== "trend" || r.latest_at === null || !c?.available) return null;
+  // Listeden çıkmış aramanın arama ilgisi 0'dır: eski sayı "şu an" gibi gösterilmez
+  if (!c.normalized || c.normalized <= 0 || !c.raw || c.raw <= 0) return null;
+  const hours = Math.floor(
+    (asDate(r.latest_at).getTime() - asDate(r.first_seen_at).getTime()) / 3_600_000,
+  );
+  return { approxTraffic: Math.round(c.raw), sinceHours: Math.max(hours, 0) };
 }
 
 /** Konu + en son snapshot + karşılaştırma snapshot'ı + kaynak sayısı */

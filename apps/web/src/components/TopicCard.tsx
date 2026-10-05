@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { TopicSummary } from "@gundemci/shared";
-import { formatRelative } from "@/lib/format";
+import { formatRelative, formatSearchVolume } from "@/lib/format";
 import { ScoreBar } from "./ScoreBar";
 import { TrendBadge } from "./TrendBadge";
 import styles from "./TopicCard.module.css";
@@ -29,6 +29,11 @@ export function TopicCard({ topic, now }: { topic: TopicSummary; now: Date }) {
         <ScoreBar value={topic.score} />
       </span>
       <span className={styles.trend}>
+        {topic.searchVolume ? (
+          <span className={styles.volume} title="Google Trends’in yaklaşık değeri">
+            {formatSearchVolume(topic.searchVolume)}
+          </span>
+        ) : null}
         <TrendBadge trend={topic.trend} changePct={topic.changePct} />
       </span>
       {topic.summary ? (

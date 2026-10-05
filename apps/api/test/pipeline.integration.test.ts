@@ -269,6 +269,8 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
     const trends = TopicListResponseSchema.parse((await app.inject("/api/v1/topics")).json());
     expect(trends.items.every((t) => t.kind === "trend")).toBe(true);
     expect(trends.items[0]?.title).toBe("Derbi"); // en yüksek arama hacmi
+    // Google'ın yaklaşık arama sayısı; liste 5 dk önce, konu da o an açıldı → 0 saat
+    expect(trends.items[0]?.searchVolume).toEqual({ approxTraffic: 50000, sinceHours: 0 });
     expect(trends.items[0]?.headline?.source).toBe("Spor Sitesi");
     const news = TopicListResponseSchema.parse(
       (await app.inject("/api/v1/topics?kind=news")).json(),

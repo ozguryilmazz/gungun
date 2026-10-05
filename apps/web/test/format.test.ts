@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatChange, formatClock, formatRelative } from "../src/lib/format";
+import { formatChange, formatClock, formatRelative, formatSearchVolume } from "../src/lib/format";
 
 describe("formatRelative", () => {
   const now = new Date("2026-10-05T12:00:00Z");
@@ -28,5 +28,16 @@ describe("formatChange", () => {
     expect(formatChange(67)).toBe("+67%");
     expect(formatChange(-52)).toBe("−52%");
     expect(formatChange(0)).toBe("0%");
+  });
+});
+
+describe("formatSearchVolume", () => {
+  it("Google'ın yaklaşık arama sayısı ve süre", () => {
+    expect(formatSearchVolume({ approxTraffic: 50000, sinceHours: 3 })).toBe(
+      "Yaklaşık 3 saatte 50.000+ arama",
+    );
+    expect(formatSearchVolume({ approxTraffic: 2000, sinceHours: 0 })).toBe(
+      "Son 1 saatte 2.000+ arama",
+    );
   });
 });

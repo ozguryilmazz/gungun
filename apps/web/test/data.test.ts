@@ -23,6 +23,7 @@ const summary = {
   signalsAvailable: 3,
   signalsTotal: 4,
   sourceCount: 4,
+  searchVolume: { approxTraffic: 50000, sinceHours: 3 },
   summary: "Bu bir örnek konudur.",
   updatedAt: NOW,
   isMock: true,
