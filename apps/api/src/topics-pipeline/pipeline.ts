@@ -715,6 +715,24 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
               .onConflictDoNothing();
           }
         }
+        // Filtreden önce bağlanmış alakasız "ilgili haberler" (başlığında terim geçmeyen) çıkarılır
+        if (existing && trendsProvider) {
+          const linkedRelated = await tx
+            .select({ id: sourceItems.id, title: sourceItems.title })
+            .from(topicItems)
+            .innerJoin(sourceItems, eq(sourceItems.id, topicItems.sourceItemId))
+            .where(
+              and(eq(topicItems.topicId, topicId), eq(sourceItems.providerId, trendsProvider.id)),
+            );
+          const stale = linkedRelated
+            .filter((r) => !titleMentionsTerm(r.title, trend.term))
+            .map((r) => r.id);
+          if (stale.length) {
+            await tx
+              .delete(topicItems)
+              .where(and(eq(topicItems.topicId, topicId), inArray(topicItems.sourceItemId, stale)));
+          }
+        }
         if (current === "hidden") return;
 
         const status = nextTrendStatus(current, trend, now);

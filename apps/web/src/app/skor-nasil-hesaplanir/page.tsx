@@ -61,6 +61,15 @@ export default function ScoreExplainerPage() {
       </section>
 
       <section className={styles.section}>
+        <h2 className={styles.h2}>Sıralama</h2>
+        <p>
+          Liste önce aramanın nedenini açıklayan en az bir haberi olan konuları, sonra açıklayan
+          haberi bulunamayan aramaları gösterir; her grup kendi içinde skora göre sıralanır. Skor
+          değişmez: açıklaması olmayan bir arama yüksek skorlu olabilir ama daha aşağıda yer alır.
+        </p>
+      </section>
+
+      <section className={styles.section}>
         <h2 className={styles.h2}>Yükselenler ve düşenler</h2>
         <p>
           Değişim yüzdesi, şu anki skorun {CHANGE_WINDOW_HOURS} saat önceki skorla

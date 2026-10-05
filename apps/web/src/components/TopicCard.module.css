@@ -172,3 +172,11 @@
     content: none;
   }
 }
+
+.unexplained {
+  grid-area: summary;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+  font-style: italic;
+}

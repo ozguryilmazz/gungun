@@ -38,6 +38,10 @@ export function TopicCard({ topic, now }: { topic: TopicSummary; now: Date }) {
         <span className={styles.summary}>
           <span className={styles.source}>{topic.headline.source}:</span> {topic.headline.title}
         </span>
+      ) : topic.kind === "trend" && topic.sourceCount === 0 ? (
+        <span className={styles.unexplained}>
+          Bu aramayı açıklayan haber henüz bulunamadı; bu yüzden açıklananların altında sıralanır.
+        </span>
       ) : null}
       <span className={styles.meta}>
         <span>{topic.sourceCount} kaynak</span>

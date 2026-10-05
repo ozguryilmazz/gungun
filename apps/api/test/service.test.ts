@@ -23,6 +23,22 @@ describe("rankTopics", () => {
     expect(unscored.trend).toBe("unknown");
   });
 
+  it("aramayı açıklayan haberi olmayan trend konusu, skoru yüksek olsa da sonra gelir", () => {
+    const rows = TREND_ROWS.map((r) =>
+      r.slug === "ornek-yukselen" ? { ...r, sourceCount: 0 } : r,
+    );
+    const items = rankTopics(rows);
+    expect(items.map((t) => t.slug)).toEqual([
+      "ornek-az-kaynakli",
+      "ornek-dusen",
+      "ornek-yukselen",
+      "ornek-skorsuz",
+    ]);
+    // Skor değişmez, yalnızca sıra
+    expect(items[2]?.score).toBe(rankTopics(TREND_ROWS)[0]?.score);
+    expect(items[2]?.rank).toBe(3);
+  });
+
   it("değişim yüzdesi ve trend", () => {
     const top = rankTopics(TREND_ROWS)[0]!;
     expect(top.changePct).toBe(67);

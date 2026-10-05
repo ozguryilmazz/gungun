@@ -182,6 +182,39 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
     expect(snap?.components.social?.available).toBe(false);
   });
 
+  it("eskiden bağlanmış alakasız ilgili haber konudan çıkarılır; açıklaması olmayan arama sonra sıralanır", async () => {
+    const uzay = (await real("trend")).find((t) => t.title === "Uzay")!;
+    const url = "https://www.baskasite.example/alakasiz";
+    const [stale] = await db
+      .insert(sourceItems)
+      .values({
+        providerId: trendsProviderId,
+        publisherId: null,
+        sourceName: "Başka Site",
+        url,
+        urlHash: createHash("sha256").update(url).digest("hex"),
+        title: "Bambaşka bir konu hakkında haber",
+        fetchedAt: at(-5),
+      })
+      .returning({ id: sourceItems.id });
+    await db.insert(topicItems).values({ topicId: uzay.id, sourceItemId: stale!.id });
+    await build(at(1));
+    expect(await db.select().from(topicItems).where(eq(topicItems.topicId, uzay.id))).toHaveLength(
+      0,
+    );
+
+    const app = await buildApp({
+      repo: createTopicRepository(db),
+      cacheTtlSeconds: 0,
+      rateLimitMax: 1000,
+      logLevel: "silent",
+    });
+    const list = TopicListResponseSchema.parse((await app.inject("/api/v1/topics")).json());
+    expect(list.items.at(-1)?.title).toBe("Uzay");
+    expect(list.items.at(-1)?.sourceCount).toBe(0);
+    await app.close();
+  });
+
   it("aramada olmayan ama çok kaynaklı olay 'haber' konusu olur", async () => {
     for (const [i, title] of [
       "Ankara'da fabrikada büyük yangın çıktı",

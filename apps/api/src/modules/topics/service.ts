@@ -57,11 +57,24 @@ function toSummary(row: TopicRow, rank: number | null): TopicSummary {
   };
 }
 
-/** Skoru olan konular skora göre sıralanır ve sıra alır; skoru olmayanlar sonda, sırasız */
+/** Trend konusu, aramayı açıklayan en az bir habere sahip mi? (haber konuları her zaman öyle) */
+export const isExplained = (r: Pick<TopicRow, "kind" | "sourceCount">) =>
+  r.kind !== "trend" || r.sourceCount > 0;
+
+/**
+ * Skoru olan konular sıra alır: önce aramayı açıklayan haberi olanlar, sonra olmayanlar; her grup
+ * kendi içinde skora göre. Skor değişmez (hâlâ ne kadar arandığını gösterir), yalnızca sıra etkilenir.
+ * Skoru olmayanlar sonda, sırasız.
+ */
 export function rankTopics(rows: TopicRow[]): TopicSummary[] {
   const scored = rows
     .filter((r) => r.latest?.score != null)
-    .sort((a, b) => b.latest!.score! - a.latest!.score! || a.slug.localeCompare(b.slug));
+    .sort(
+      (a, b) =>
+        Number(isExplained(b)) - Number(isExplained(a)) ||
+        b.latest!.score! - a.latest!.score! ||
+        a.slug.localeCompare(b.slug),
+    );
   const unscored = rows
     .filter((r) => r.latest?.score == null)
     .sort((a, b) => a.slug.localeCompare(b.slug));
