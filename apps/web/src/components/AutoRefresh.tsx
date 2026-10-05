@@ -7,6 +7,9 @@ import styles from "./AutoRefresh.module.css";
 
 /** Kontrol aralığı: veriler yaklaşık 10 dakikada bir değişir; 2 dakika yeterince günceldir */
 const INTERVAL_MS = 120_000;
+/** Bu kadar pikselden az kaydırılmışsa kullanıcı listenin başında sayılır */
+const NEAR_TOP_PX = 300;
+const nearTop = () => window.scrollY < NEAR_TOP_PX;
 
 interface Props {
   slugs: string[];
@@ -17,8 +20,9 @@ interface Props {
 /**
  * Sayfa açıkken listeyi arka planda kontrol eder.
  * - Yalnızca skorlar/sıra değiştiyse sayfa sessizce yenilenir (kaydırma konumu korunur).
- * - Listeye YENİ konu girdiyse okuyanın önündeki liste değişmesin diye önce şerit gösterilir.
- * - Sekme arka plandayken kontrol yapılmaz.
+ * - Listeye YENİ konu girdiyse: sayfanın üstündeyse liste kendiliğinden güncellenir; aşağı
+ *   kaydırmış okuyorsa önündeki liste değişmesin diye şerit gösterilir (yukarı çıkınca güncellenir).
+ * - Sekme arka plandayken kontrol yapılmaz; sekmeye dönülünce hemen kontrol edilir.
  */
 export function AutoRefresh({ slugs, signature, category }: Props) {
   const router = useRouter();
@@ -39,12 +43,25 @@ export function AutoRefresh({ slugs, signature, category }: Props) {
       if (!Array.isArray(data.slugs) || typeof data.signature !== "string") return;
       const fetched = data.slugs.filter((s): s is string => typeof s === "string");
       const added = newSlugs(latest.current.slugs, fetched);
-      if (added.length > 0) setPending(added.length);
+      if (added.length > 0 && !nearTop()) setPending(added.length);
       else if (data.signature !== latest.current.signature) router.refresh();
     } catch {
       // Ağ hatası: bir sonraki kontrolde tekrar denenir; kullanıcıya hata gösterilmez
     }
   }, [category, router]);
+
+  // Şerit açıkken kullanıcı listenin başına dönerse liste kendiliğinden güncellenir
+  useEffect(() => {
+    if (pending === 0) return;
+    let done = false;
+    const onScroll = () => {
+      if (done || !nearTop()) return;
+      done = true; // kaydırma boyunca tek yenileme
+      router.refresh();
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [pending, router]);
 
   useEffect(() => {
     const timer = setInterval(check, INTERVAL_MS);

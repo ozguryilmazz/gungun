@@ -168,7 +168,7 @@ Kural tabanlı (`apps/api/src/topics-pipeline/term-filter.ts`), yapay zekâ yok:
 - **Mini grafik:** Kartta son 24 saatin skor eğrisi (her saatin son ölçümü; `TopicSummary.sparkline`). En az 2 ölçüm yoksa çizilmez. Dikey eksen en az 20 puanı kapsar: küçük dalgalanmalar abartılmaz.
 - **Kendiliğinden güncelleme:** Sayfa açıkken 2 dakikada bir aynı kökendeki `/api/ozet` (yalnızca sıra + skor imzası) kontrol edilir.
   - Yalnızca skor/sıra değiştiyse sayfa sessizce yenilenir.
-  - Yeni konu girdiyse “N yeni konu listeye girdi · Göster” şeridi çıkar; okuyanın önündeki liste kendiliğinden değişmez.
+  - Yeni konu girdiyse: kullanıcı sayfanın başındaysa liste kendiliğinden güncellenir; aşağı kaydırmışsa “N yeni konu listeye girdi · Göster” şeridi çıkar (okuyanın önündeki liste değişmez) ve yukarı dönünce liste kendiliğinden güncellenir.
   - Sekme arka plandayken kontrol yapılmaz. Tarayıcı backend API’ye doğrudan bağlanmaz.
 - **Paylaşım:** Konu sayfasında paylaş düğmeleri (telefonda sistem menüsü, WhatsApp, X, bağlantıyı kopyala). Konu ve ana sayfa için otomatik paylaşım görseli (Open Graph, 1200×630). Yalnızca ölçülen veri: başlık, kategori, skor, yaklaşık arama sayısı.
   - `SITE_URL` (.env) paylaşım bağlantılarının tam adresidir; canlıda `https://gundemci.org`.
