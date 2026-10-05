@@ -6,7 +6,8 @@ import {
   representative,
   type ClusterInput,
 } from "../src/topics-pipeline/cluster.ts";
-import { calmTitle, slugify, tokenize } from "../src/topics-pipeline/text.ts";
+import { matchTrend } from "../src/topics-pipeline/pipeline.ts";
+import { calmTitle, isMediaTerm, slugify, tokenize } from "../src/topics-pipeline/text.ts";
 
 describe("tokenize", () => {
   it("Türkçe ekleri ve durak kelimeleri ayıklar", () => {
@@ -127,5 +128,50 @@ describe("clusterItems", () => {
     expect(clusters).toHaveLength(1);
     expect(clusters[0]?.topicId).toBe("topic-1");
     expect(clusters[0]?.items).toHaveLength(3);
+  });
+});
+
+describe("matchTrend", () => {
+  const cluster = (titles: string[]) => ({
+    topicId: null,
+    tokenCounts: new Map<string, number>(),
+    items: titles.map((title, i) => ({
+      id: i,
+      title,
+      url: "https://x.com/a",
+      publisherId: i,
+      at: new Date(),
+      topicId: null,
+    })),
+  });
+  const trend = (term: string) => ({ term, tokens: tokenize(term), approxTraffic: 10000 });
+
+  it("medya adı araması (Sözcü) 'parti sözcüsü' haberiyle eşleşmez", () => {
+    const c = cluster(["AK Parti Sözcüsü Çelik'ten tepki", "AK Parti Sözcüsü açıklama yaptı"]);
+    expect(isMediaTerm("Sözcü")).toBe(true);
+    expect(matchTrend(c, [trend("sözcü")])).toBeNull();
+  });
+
+  it("tek kelimelik terim: kendisi ve hal ekli hâli eşleşir, iyelik/türetilmiş hâli eşleşmez", () => {
+    expect(
+      matchTrend(cluster(["Derbide gergin anlar", "Fenerbahçe derbiden galip çıktı"]), [
+        trend("derbi"),
+      ])?.term,
+    ).toBe("derbi");
+    expect(
+      matchTrend(cluster(["Parti sözcüsü açıklama yaptı", "Sözcüsü konuştu"]), [trend("sözcüler")]),
+    ).toBeNull();
+    const c = cluster(["Malatya'da deprem meydana geldi", "Deprem sonrası açıklama"]);
+    expect(matchTrend(c, [trend("deprem")])?.term).toBe("deprem");
+    const yasak = cluster(["Gözlükler yasaklanıyor", "Yasaklanan gözlükler"]);
+    expect(matchTrend(yasak, [trend("yasak")])).toBeNull();
+  });
+
+  it("çok kelimeli terim kök eşleşmesiyle bulunur", () => {
+    const c = cluster([
+      "Fenerbahçe Galatasaray derbisinde gergin anlar",
+      "Derbide Fenerbahçe kazandı",
+    ]);
+    expect(matchTrend(c, [trend("fenerbahçe galatasaray")])?.term).toBe("fenerbahçe galatasaray");
   });
 });

@@ -322,3 +322,123 @@ export function calmTitle(title: string): string {
   }
   return t.slice(0, 200);
 }
+
+/** Başlıktaki kelimeler (ekler soyulmadan; yalnızca kesme işaretinden sonrası atılır) */
+export function words(title: string): string[] {
+  return title
+    .toLocaleLowerCase("tr-TR")
+    .replace(/['’‘`´][a-zçğıöşü]+/g, "")
+    .split(/[^a-zçğıöşüâîû0-9]+/u)
+    .filter(Boolean);
+}
+
+/**
+ * Gazete, kanal ve ajans adları. Bu terimler Google'da çoğunlukla sitenin kendisine ulaşmak için
+ * aranır; bir olayın arama ilgisi sayılmaz ("Sözcü" araması ≠ "AK Parti Sözcüsü" haberi).
+ */
+const MEDIA_TERMS = new Set(
+  [
+    "sözcü",
+    "sözcü tv",
+    "sabah",
+    "hürriyet",
+    "milliyet",
+    "cumhuriyet",
+    "habertürk",
+    "haberturk",
+    "ntv",
+    "trt",
+    "trt haber",
+    "trt 1",
+    "trt1",
+    "cnn türk",
+    "cnn turk",
+    "aa",
+    "anadolu ajansı",
+    "bbc",
+    "bbc türkçe",
+    "dw",
+    "dw türkçe",
+    "a haber",
+    "ahaber",
+    "halk tv",
+    "halktv",
+    "fox tv",
+    "now tv",
+    "show tv",
+    "kanal d",
+    "star tv",
+    "atv",
+    "tv8",
+    "tele1",
+    "tv100",
+    "ekol tv",
+    "sözcü gazetesi",
+    "sabah gazetesi",
+    "posta",
+    "takvim",
+    "yeni şafak",
+    "karar",
+    "t24",
+    "diken",
+    "odatv",
+    "oda tv",
+    "medyascope",
+    "euronews",
+    "bloomberg ht",
+    "bloomberght",
+    "ensonhaber",
+    "haberler",
+  ].map((t) => t.toLocaleLowerCase("tr-TR")),
+);
+
+export function isMediaTerm(term: string): boolean {
+  return MEDIA_TERMS.has(term.toLocaleLowerCase("tr-TR").trim().replace(/\s+/g, " "));
+}
+
+/**
+ * Kelime, terimin kendisi mi yoksa terim + HAL eki mi? (derbide, depremden, İstanbul'a)
+ * İyelik ekleri (sözcüsü, başkanı) kabul EDİLMEZ: anlam değişebilir ("sözcü" ≠ "parti sözcüsü").
+ */
+const CASE_SUFFIXES = [
+  "",
+  "de",
+  "da",
+  "te",
+  "ta",
+  "den",
+  "dan",
+  "ten",
+  "tan",
+  "e",
+  "a",
+  "ye",
+  "ya",
+  "i",
+  "ı",
+  "u",
+  "ü",
+  "yi",
+  "yı",
+  "yu",
+  "yü",
+  "in",
+  "ın",
+  "un",
+  "ün",
+  "nin",
+  "nın",
+  "nun",
+  "nün",
+  "le",
+  "la",
+  "yle",
+  "yla",
+  "ler",
+  "lar",
+];
+
+export function isTermWithCase(word: string, term: string): boolean {
+  if (!word.startsWith(term)) return false;
+  return CASE_SUFFIXES.includes(word.slice(term.length));
+}

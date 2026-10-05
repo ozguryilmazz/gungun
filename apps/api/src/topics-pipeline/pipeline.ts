@@ -29,7 +29,7 @@ import {
   type Cluster,
   type ClusterInput,
 } from "./cluster.ts";
-import { calmTitle, slugify, tokenize } from "./text.ts";
+import { calmTitle, isMediaTerm, isTermWithCase, slugify, tokenize, words } from "./text.ts";
 
 /** Konu oluşturma ve yaşam döngüsü eşikleri */
 export const RULES = {
@@ -105,12 +105,22 @@ function trafficToNormalized(traffic: number | null): number {
   return Math.min(Math.log10(traffic) / 6, 1);
 }
 
-function matchTrend(cluster: Cluster, trends: TrendObservation[]): TrendObservation | null {
+/**
+ * Trend terimini kümeyle eşleştirir. Yanlış eşleşmeye karşı:
+ *  - medya adları (Sözcü, Sabah, NTV…) hiç eşleşmez;
+ *  - tek kelimelik terim, kelimenin kendisi veya hal ekli hâliyle eşleşir; iyelik ekli hâli eşleşmez:
+ *    "derbi" → "derbide" eşleşir, "sözcü" → "AK Parti Sözcüsü" eşleşmez;
+ *  - çok kelimeli terimde tüm kelime kökleri başlıkta geçmelidir.
+ */
+export function matchTrend(cluster: Cluster, trends: TrendObservation[]): TrendObservation | null {
   let best: TrendObservation | null = null;
   let bestRatio = 0;
   for (const trend of trends) {
-    if (trend.tokens.length === 0) continue;
+    if (trend.tokens.length === 0 || isMediaTerm(trend.term)) continue;
+    const termWords = words(trend.term);
+    const single = termWords.length === 1 ? termWords[0]! : null;
     const hits = cluster.items.filter((i) => {
+      if (single) return words(i.title).some((w) => isTermWithCase(w, single));
       const tokens = new Set(tokenize(i.title));
       return trend.tokens.every((t) => tokens.has(t));
     }).length;
