@@ -12,6 +12,9 @@ export interface SnapshotRef {
 export interface TopicRow {
   slug: string;
   title: string;
+  kind: "trend" | "news";
+  /** Konuya bağlı en güncel haber başlığı (kaynağıyla) */
+  headline: { title: string; source: string; url: string } | null;
   categorySlug: string;
   categoryName: string;
   summary: string | null;
@@ -55,7 +58,7 @@ export interface ArchiveRow {
 }
 
 export interface TopicRepository {
-  listVisibleTopics(windowMinutes: number): Promise<TopicRow[]>;
+  listVisibleTopics(windowMinutes: number, kind: "trend" | "news"): Promise<TopicRow[]>;
   getTopicDetail(slug: string, windowMinutes: number): Promise<TopicDetailRow | null>;
   getTopicHistory(slug: string, since: Date): Promise<SnapshotRef[] | null>;
   listProviders(): Promise<ProviderRow[]>;
@@ -78,6 +81,10 @@ type RawTopic = {
   id: string;
   slug: string;
   title: string;
+  kind: "trend" | "news";
+  h_title: string | null;
+  h_source: string | null;
+  h_url: string | null;
   category_slug: string;
   category_name: string;
   summary: string | null;
@@ -103,6 +110,11 @@ function mapTopic(r: RawTopic): TopicRow {
   return {
     slug: r.slug,
     title: r.title,
+    kind: r.kind,
+    headline:
+      r.h_title && r.h_url
+        ? { title: r.h_title, source: r.h_source ?? "Bilinmeyen kaynak", url: r.h_url }
+        : null,
     categorySlug: r.category_slug,
     categoryName: r.category_name,
     summary: r.summary,
@@ -126,7 +138,8 @@ function mapTopic(r: RawTopic): TopicRow {
 /** Konu + en son snapshot + karşılaştırma snapshot'ı + kaynak sayısı */
 function topicSelect(windowMinutes: number) {
   return sql`
-    select t.id, t.slug, t.title, t.summary, t.is_mock, t.updated_at, t.first_seen_at,
+    select t.id, t.slug, t.title, t.kind, t.summary, t.is_mock, t.updated_at, t.first_seen_at,
+           h.h_title, h.h_source, h.h_url,
            t.reasons, t.summary_origin, t.status,
            c.slug as category_slug, c.name as category_name,
            l.captured_at as latest_at, l.score as latest_score,
@@ -150,15 +163,24 @@ function topicSelect(windowMinutes: number) {
       order by s.captured_at desc
       limit 1
     ) p on true
+    left join lateral (
+      select si.title as h_title, coalesce(pub.name, si.source_name) as h_source, si.url as h_url
+      from topic_items ti
+      join source_items si on si.id = ti.source_item_id
+      left join publishers pub on pub.id = si.publisher_id
+      where ti.topic_id = t.id
+      order by coalesce(si.published_at, si.fetched_at) desc nulls last, si.id desc
+      limit 1
+    ) h on true
   `;
 }
 
 export function createTopicRepository(db: Database): TopicRepository {
   return {
-    async listVisibleTopics(windowMinutes) {
+    async listVisibleTopics(windowMinutes, kind) {
       const rows = await db.execute<RawTopic>(sql`
         ${topicSelect(windowMinutes)}
-        where t.status in ${VISIBLE_STATUSES}
+        where t.status in ${VISIBLE_STATUSES} and t.kind = ${kind}
         limit ${MAX_TOPICS}
       `);
       return rows.map(mapTopic);
@@ -186,7 +208,7 @@ export function createTopicRepository(db: Database): TopicRepository {
           publisher_name: string | null;
           published_at: Date | null;
         }>(sql`
-          select si.title, si.url, p.name as publisher_name, si.published_at
+          select si.title, si.url, coalesce(p.name, si.source_name) as publisher_name, si.published_at
           from topic_items ti
           join source_items si on si.id = ti.source_item_id
           left join publishers p on p.id = si.publisher_id

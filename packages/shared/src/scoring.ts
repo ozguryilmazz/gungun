@@ -1,12 +1,12 @@
-// Gündem skoru — docs/01-mimari-plan.md, bölüm A.
-// Skor bir konunun ne kadar konuşulduğunu ölçer; önemini DEĞİL.
+// Gündem skoru — docs/02-arama-oncelikli-plan.md, bölüm 4 (arama öncelikli).
+// Skor bir konunun ne kadar arandığını/konuşulduğunu ölçer; önemini DEĞİL.
 
 /** Bileşen ağırlıkları (toplam 1) */
 export const SCORE_WEIGHTS = {
-  news_visibility: 0.35,
-  velocity: 0.25,
-  search_interest: 0.3,
-  social: 0.1,
+  search_interest: 0.5,
+  social: 0.25,
+  news_visibility: 0.15,
+  velocity: 0.1,
 } as const;
 
 export type ComponentKey = keyof typeof SCORE_WEIGHTS;
@@ -100,7 +100,7 @@ export const CHANGE_WINDOW_HOURS = 3;
 export const CHANGE_WINDOW_TOLERANCE_MINUTES = 30;
 
 /**
- * "Yükselenler" listesine girmek için gereken en az kaynak sayısı.
- * Az kaynaktan doğan abartılı yüzdeleri (+900% gibi) eler.
+ * HABER konularında "yükselenler" için en az kaynak sayısı (az kaynaktan doğan abartılı
+ * yüzdeleri eler). Trend konularında arama hacminin kendisi sinyal olduğu için uygulanmaz.
  */
 export const RISING_MIN_SOURCES = 3;

@@ -50,6 +50,9 @@ export const topicStatus = pgEnum("topic_status", [
 
 export const summaryOrigin = pgEnum("summary_origin", ["none", "manual", "ai"]);
 
+/** trend: Google Trends'teki bir arama (ana gündem) · news: aramada olmayan büyük haber */
+export const topicKind = pgEnum("topic_kind", ["trend", "news"]);
+
 export const providerKind = pgEnum("provider_kind", ["trend", "news", "social", "manual"]);
 
 export const fetchStatus = pgEnum("fetch_status", ["running", "success", "partial", "failed"]);
@@ -60,6 +63,8 @@ export const timelineEventType = pgEnum("timeline_event_type", [
   "search_spike", // arama ilgisinde sıçrama
   "entered_top5", // gündem sıralamasında ilk 5'e girdi
   "peak", // zirve skor
+  "trend_listed", // Google Türkiye trend listesine girdi
+  "trend_left", // trend listesinden çıktı
 ]);
 
 export const adminRole = pgEnum("admin_role", ["admin", "editor"]);
@@ -196,6 +201,8 @@ export const sourceItems = pgTable(
     publisherId: integer("publisher_id").references(() => publishers.id, {
       onDelete: "restrict",
     }),
+    // Yayıncı listemizde olmayan kaynaklar için (ör. Google'ın ilgili haberleri) kaynak adı
+    sourceName: varchar("source_name", { length: 96 }),
     url: varchar("url", { length: 2048 }).notNull(),
     // Normalize edilmiş URL'nin SHA-256 hex özeti — tekrar kayıt engeli
     urlHash: char("url_hash", { length: 64 }).notNull().unique(),
@@ -221,6 +228,9 @@ export const topics = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     slug: varchar("slug", { length: 160 }).notNull().unique(),
     title: varchar("title", { length: 200 }).notNull(),
+    kind: topicKind("kind").notNull().default("news"),
+    /** Trend konularında arama teriminin normalleştirilmiş hâli (her terim tek konu) */
+    trendKey: varchar("trend_key", { length: 200 }),
     categoryId: smallint("category_id")
       .notNull()
       .references(() => categories.id, { onDelete: "restrict" }),
@@ -237,6 +247,8 @@ export const topics = pgTable(
   },
   (t) => [
     index("topics_status_updated_idx").on(t.status, t.updatedAt.desc()),
+    index("topics_kind_status_idx").on(t.kind, t.status),
+    uniqueIndex("topics_trend_key_uq").on(t.trendKey),
     index("topics_category_idx").on(t.categoryId),
     check("topics_slug_format", sql`${t.slug} ~ '^[a-z0-9]+(-[a-z0-9]+)*$'`),
     check("topics_summary_length", sql`${t.summary} is null or char_length(${t.summary}) <= 1200`),

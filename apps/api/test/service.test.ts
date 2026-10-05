@@ -5,11 +5,11 @@ import {
   selectFalling,
   selectRising,
 } from "../src/modules/topics/service.ts";
-import { NOW, PROVIDERS, ROWS } from "./helpers.ts";
+import { NOW, PROVIDERS, ROWS, TREND_ROWS } from "./helpers.ts";
 
 describe("rankTopics", () => {
   it("skora göre sıralar, skoru olmayan sonda ve sırasız", () => {
-    const items = rankTopics(ROWS);
+    const items = rankTopics(TREND_ROWS);
     expect(items.map((t) => t.slug)).toEqual([
       "ornek-yukselen",
       "ornek-az-kaynakli",
@@ -24,20 +24,23 @@ describe("rankTopics", () => {
   });
 
   it("değişim yüzdesi ve trend", () => {
-    const top = rankTopics(ROWS)[0]!;
+    const top = rankTopics(TREND_ROWS)[0]!;
     expect(top.changePct).toBe(67);
     expect(top.trend).toBe("surging");
   });
 });
 
 describe("selectRising / selectFalling", () => {
-  it("az kaynaklı konu yükselenlerde yer almaz", () => {
-    const rising = selectRising(rankTopics(ROWS), 5);
-    expect(rising.map((t) => t.slug)).toEqual(["ornek-yukselen"]);
+  it("trend konularında kaynak eşiği yok; haber konularında az kaynaklı konu elenir", () => {
+    const rising = selectRising(rankTopics(TREND_ROWS), 5);
+    expect(rising.map((t) => t.slug)).toEqual(["ornek-az-kaynakli", "ornek-yukselen"]);
+    const news = rankTopics(ROWS.filter((r) => r.kind === "news"));
+    expect(news[0]?.changePct).toBe(200);
+    expect(selectRising(news, 5)).toHaveLength(0);
   });
 
   it("düşenler", () => {
-    expect(selectFalling(rankTopics(ROWS), 5).map((t) => t.slug)).toEqual(["ornek-dusen"]);
+    expect(selectFalling(rankTopics(TREND_ROWS), 5).map((t) => t.slug)).toEqual(["ornek-dusen"]);
   });
 });
 

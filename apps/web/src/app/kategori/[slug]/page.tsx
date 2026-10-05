@@ -25,11 +25,12 @@ export default async function CategoryPage({ params }: Props) {
   const category = findCategory((await params).slug);
   if (!category) notFound();
 
-  const [list, rising, falling, status] = await Promise.all([
+  const [list, rising, falling, status, news] = await Promise.all([
     getTopicList({ category: category.slug }),
     optional(getRising()),
     optional(getFalling()),
     optional(getStatus()),
+    optional(getTopicList({ kind: "news", category: category.slug, limit: 6 })),
   ]);
   return (
     <TopicFeed
@@ -39,6 +40,7 @@ export default async function CategoryPage({ params }: Props) {
       rising={rising}
       falling={falling}
       status={status}
+      news={news}
     />
   );
 }

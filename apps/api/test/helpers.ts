@@ -11,6 +11,12 @@ const minutesAgo = (m: number) => new Date(NOW.getTime() - m * 60_000);
 export function topicRow(overrides: Partial<TopicRow> & { slug: string }): TopicRow {
   return {
     title: `Örnek: ${overrides.slug}`,
+    kind: "trend",
+    headline: {
+      title: "Örnek kaynak başlığı",
+      source: "Örnek Kaynak",
+      url: "https://example.org/h",
+    },
     categorySlug: "teknoloji",
     categoryName: "Teknoloji",
     summary: "Bu bir örnek konudur.",
@@ -47,7 +53,18 @@ export const ROWS: TopicRow[] = [
     previous: { capturedAt: minutesAgo(189), score: 69 },
   }),
   topicRow({ slug: "ornek-skorsuz", latest: null, previous: null, sourceCount: 0 }),
+  // Haber konusu: hızlı yükseliyor ama yalnızca 2 kaynakta → haber "yükselenler"e girmez
+  topicRow({
+    slug: "ornek-haber-az-kaynakli",
+    kind: "news",
+    headline: null,
+    latest: { capturedAt: minutesAgo(5), score: 60, signalsAvailable: 3, signalsTotal: 4 },
+    previous: { capturedAt: minutesAgo(185), score: 20 },
+    sourceCount: 2,
+  }),
 ];
+
+export const TREND_ROWS = ROWS.filter((r) => r.kind === "trend");
 
 export const PROVIDERS: ProviderRow[] = [
   {
@@ -93,10 +110,10 @@ export function fakeRepo(rows: TopicRow[] = ROWS): FakeRepo {
   const count = (k: string) => (calls[k] = (calls[k] ?? 0) + 1);
   const repo: FakeRepo = {
     calls,
-    async listVisibleTopics() {
+    async listVisibleTopics(_window, kind) {
       count("list");
       if (repo.failWith) throw repo.failWith;
-      return rows;
+      return rows.filter((r) => r.kind === kind);
     },
     async getTopicDetail(slug) {
       count("detail");

@@ -12,6 +12,8 @@ const NOW = "2026-10-05T12:00:00.000Z";
 const summary = {
   slug: "ornek-konu",
   title: "Örnek: Konu",
+  kind: "trend",
+  headline: { title: "Kaynak başlığı", source: "Örnek", url: "https://example.org/h" },
   category: { slug: "teknoloji", name: "Teknoloji" },
   rank: 1,
   score: 92,
@@ -67,7 +69,9 @@ describe("veri katmanı → API", () => {
     fetchMock.mockResolvedValue(json(listBody));
     const result = await getTopicList({ category: "spor", limit: 5 });
     expect(result.items[0]?.slug).toBe("ornek-konu");
-    expect(requestedUrl()).toBe("http://127.0.0.1:4000/api/v1/topics?limit=5&category=spor");
+    expect(requestedUrl()).toBe(
+      "http://127.0.0.1:4000/api/v1/topics?kind=trend&limit=5&category=spor",
+    );
   });
 
   it("limit sınırlanır", async () => {

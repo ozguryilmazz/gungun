@@ -1,10 +1,11 @@
 import type { StatusResponse, TopicListResponse } from "@gundemci/shared";
-import { CHANGE_WINDOW_HOURS, RISING_MIN_SOURCES } from "@gundemci/shared";
+import { CHANGE_WINDOW_HOURS } from "@gundemci/shared";
 import Link from "next/link";
 import { formatDate, formatRelative } from "@/lib/format";
 import { CategoryNav } from "./CategoryNav";
 import { MockBanner } from "./MockBanner";
 import { MovementList } from "./MovementList";
+import { NewsHighlights } from "./NewsHighlights";
 import { SourceStatus } from "./SourceStatus";
 import { TopicCard } from "./TopicCard";
 import styles from "./TopicFeed.module.css";
@@ -17,10 +18,11 @@ interface Props {
   rising: TopicListResponse | null;
   falling: TopicListResponse | null;
   status: StatusResponse | null;
+  news: TopicListResponse | null;
 }
 
 /** Ana sayfa ve kategori sayfalarının ortak düzeni */
-export function TopicFeed({ heading, activeCategory, list, rising, falling, status }: Props) {
+export function TopicFeed({ heading, activeCategory, list, rising, falling, status, news }: Props) {
   const now = new Date(list.meta.generatedAt);
   const isMock = list.meta.isMock || !!rising?.meta.isMock || !!falling?.meta.isMock;
   const latest = list.items.reduce<string | null>(
@@ -41,7 +43,8 @@ export function TopicFeed({ heading, activeCategory, list, rising, falling, stat
               {list.items.length} konu
             </p>
             <p className={styles.note}>
-              Gündem skoru bir konunun ne kadar konuşulduğunu ölçer, önemini değil.{" "}
+              Liste, Türkiye’de Google’da trend olan aramalardan oluşur; haberler aramanın nedenini
+              açıklar. Gündem skoru ne kadar arandığını ölçer, önemini değil.{" "}
               <Link href="/skor-nasil-hesaplanir">Skor nasıl hesaplanır?</Link>
             </p>
           </div>
@@ -49,7 +52,11 @@ export function TopicFeed({ heading, activeCategory, list, rising, falling, stat
           <CategoryNav active={activeCategory} />
 
           {list.items.length === 0 ? (
-            <p className={styles.empty}>Bu kategoride şu anda gündemde olan bir konu yok.</p>
+            <p className={styles.empty}>
+              {activeCategory
+                ? "Bu kategoride şu anda trend olan bir arama yok."
+                : "Şu anda trend arama verisi yok. Bu veri şu anda güncellenemiyor olabilir."}
+            </p>
           ) : (
             <ol className={styles.list}>
               {list.items.map((t) => (
@@ -59,6 +66,8 @@ export function TopicFeed({ heading, activeCategory, list, rising, falling, stat
               ))}
             </ol>
           )}
+
+          <NewsHighlights list={news} />
         </main>
 
         <aside className={styles.aside} aria-label="Gündem hareketleri">
@@ -66,7 +75,7 @@ export function TopicFeed({ heading, activeCategory, list, rising, falling, stat
             <MovementList
               id="rising-title"
               title="Şu anda yükselenler"
-              description={`Son ${CHANGE_WINDOW_HOURS} saatteki değişim · en az ${RISING_MIN_SOURCES} kaynakta yer alan konular`}
+              description={`Arama ilgisinde son ${CHANGE_WINDOW_HOURS} saatteki değişim`}
               items={rising?.items ?? null}
               emptyText="Şu anda belirgin şekilde yükselen bir konu yok."
               numbered

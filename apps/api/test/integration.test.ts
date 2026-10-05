@@ -51,8 +51,8 @@ describe.skipIf(!URL_)("API + PostgreSQL entegrasyonu", () => {
         slug: "ornek-yeni-nesil-akilli-telefon-tanitimi",
         rank: 1,
         score: 92,
-        previousScore: 55,
-        changePct: 67,
+        previousScore: 58,
+        changePct: 59,
         trend: "surging",
         sourceCount: 4,
         signalsAvailable: 3,
@@ -61,12 +61,12 @@ describe.skipIf(!URL_)("API + PostgreSQL entegrasyonu", () => {
     );
   });
 
-  it("yükselenler az kaynaklı konuyu içermez; düşenler doğru", async () => {
+  it("yükselenler (trend konularında kaynak eşiği yok); düşenler doğru", async () => {
     const rising = TopicListResponseSchema.parse(
       (await app.inject("/api/v1/topics/rising")).json(),
     );
-    expect(rising.items.map((t) => t.slug)).not.toContain("ornek-uzay-gorevi-firlatmasi");
-    expect(rising.items[0]?.slug).toBe("ornek-yeni-nesil-akilli-telefon-tanitimi");
+    expect(rising.items[0]?.slug).toBe("ornek-uzay-gorevi-firlatmasi");
+    expect(rising.items.map((t) => t.slug)).toContain("ornek-yeni-nesil-akilli-telefon-tanitimi");
     const falling = TopicListResponseSchema.parse(
       (await app.inject("/api/v1/topics/falling")).json(),
     );

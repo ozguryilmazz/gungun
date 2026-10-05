@@ -1,4 +1,5 @@
-// Gündem üretim süreci: haber → konu → skor → yaşam döngüsü → API/arşiv. Gerçek PostgreSQL.
+// Arama öncelikli gündem üretimi: Trends → trend konuları (+ açıklayıcı haberler), eşleşmeyen büyük
+// haberler → haber konuları, yaşam döngüsü, API ve arşiv. Gerçek PostgreSQL.
 // Yalnızca TEST_DATABASE_URL tanımlıysa çalışır ve veritabanını SIFIRLAR (adı "_test" ile bitmeli).
 import { createHash } from "node:crypto";
 import {
@@ -20,12 +21,12 @@ import {
   TopicDetailResponseSchema,
   TopicListResponseSchema,
 } from "@gundemci/shared";
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import type postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.ts";
 import { createTopicRepository } from "../src/modules/topics/repository.ts";
-import { buildTopics } from "../src/topics-pipeline/pipeline.ts";
+import { buildTopics, displayTerm } from "../src/topics-pipeline/pipeline.ts";
 
 const URL_ = process.env.TEST_DATABASE_URL;
 const silent = { info() {}, warn() {}, error() {} };
@@ -33,13 +34,21 @@ const silent = { info() {}, warn() {}, error() {} };
 const T0 = new Date("2026-10-05T09:00:00Z");
 const at = (minutesFromT0: number) => new Date(T0.getTime() + minutesFromT0 * 60_000);
 
-describe.skipIf(!URL_)("gündem üretim süreci", () => {
+describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
   let db: Database;
   let client: postgres.Sql;
   let close: () => Promise<void>;
   let pubs: { id: number; domain: string }[];
   let rssProviderId: number;
+  let trendsProviderId: number;
   const build = (now: Date) => buildTopics({ db, client, log: silent, now: () => now });
+  const real = async (kind?: "trend" | "news") =>
+    db
+      .select()
+      .from(topics)
+      .where(
+        kind ? and(eq(topics.isMock, false), eq(topics.kind, kind)) : eq(topics.isMock, false),
+      );
 
   async function addItem(pubIndex: number, title: string, minutes: number, section = "ekonomi") {
     const p = pubs[pubIndex]!;
@@ -58,6 +67,30 @@ describe.skipIf(!URL_)("gündem üretim süreci", () => {
     });
   }
 
+  async function trendBatch(
+    minutes: number,
+    terms: {
+      term: string;
+      traffic: number;
+      related?: { title: string; url: string; source: string }[];
+    }[],
+  ) {
+    await db
+      .update(dataProviders)
+      .set({ lastSuccessAt: at(minutes) })
+      .where(eq(dataProviders.id, trendsProviderId));
+    await db.insert(trendSignals).values(
+      terms.map((t) => ({
+        providerId: trendsProviderId,
+        term: t.term,
+        geo: "TR",
+        approxTraffic: t.traffic,
+        observedAt: at(minutes),
+        related: t.related ?? [],
+      })),
+    );
+  }
+
   beforeAll(async () => {
     const url = URL_ as string;
     if (!new URL(url).pathname.endsWith("_test"))
@@ -67,156 +100,143 @@ describe.skipIf(!URL_)("gündem üretim süreci", () => {
     await db.execute(sql`drop schema public cascade`);
     await db.execute(sql`create schema public`);
     await runMigrations(url);
-    await seedDatabase(db, { includeMock: true, now: T0 });
+    await seedDatabase(db, { includeMock: false, now: T0 });
     pubs = await db
       .select({ id: publishers.id, domain: publishers.domain })
       .from(publishers)
       .where(eq(publishers.isMock, false))
       .orderBy(asc(publishers.id));
-    const [p] = await db
-      .select({ id: dataProviders.id })
-      .from(dataProviders)
-      .where(eq(dataProviders.key, "rss_news"));
-    rssProviderId = p!.id;
+    const providers = await db
+      .select({ id: dataProviders.id, key: dataProviders.key })
+      .from(dataProviders);
+    rssProviderId = providers.find((p) => p.key === "rss_news")!.id;
+    trendsProviderId = providers.find((p) => p.key === "google_trends")!.id;
 
-    // Olay A: 4 yayıncı (yayına girmeli)
+    // Haberler
     await addItem(0, "Merkez Bankası politika faizini yüzde 40'ta sabit tuttu", -100);
-    await addItem(
-      1,
-      "SON DAKİKA: Merkez Bankası faiz kararını açıkladı: politika faizi sabit",
-      -90,
-    );
+    await addItem(1, "Merkez Bankası faiz kararını açıkladı: politika faizi sabit", -90);
     await addItem(2, "Merkez Bankası politika faizini sabit bıraktı", -40);
     await addItem(3, "Merkez Bankası faiz kararı: politika faizi yüzde 40", -20);
-    // Olay B: 2 yayıncı (aday kalmalı; Trends eşleşirse yayına girmeli)
     await addItem(4, "Fenerbahçe derbide Galatasaray'ı 2-1 yendi", -60, "spor");
     await addItem(5, "Derbide kazanan Fenerbahçe: Galatasaray 1-2 Fenerbahçe", -50, "spor");
-    // Tek yayıncı: konu olmamalı
     await addItem(6, "İstanbul'da kar yağışı ulaşımı aksattı", -30, "gundem");
-    // 24 saatten eski: hiç dikkate alınmamalı
-    await addItem(7, "Merkez Bankası politika faizi eski haber", -60 * 30);
+
+    // Trend listesi (5 dk önce çekilmiş)
+    await trendBatch(-5, [
+      {
+        term: "derbi",
+        traffic: 50000,
+        related: [
+          {
+            title: "Derbinin ardından açıklamalar",
+            url: "https://www.sporsitesi.example/derbi",
+            source: "Spor Sitesi",
+          },
+        ],
+      },
+      { term: "merkez bankası", traffic: 20000 },
+      { term: "uzay", traffic: 5000 },
+      { term: "sözcü", traffic: 10000 }, // medya adı → konu olmaz
+    ]);
   });
 
   afterAll(async () => {
     await close?.();
   });
 
-  it("konular oluşur; yalnızca yeterli kaynaklı olan yayına girer", async () => {
+  it("her trend araması bir konu olur; haberler konuyu açıklar; medya adı atlanır", async () => {
     const r = await build(T0);
-    expect(r.itemsInWindow).toBe(7);
-    expect(r.created).toBe(2);
-    expect(r.published).toBe(1);
+    expect(r.trends).toBe(3);
+    const trendTopics = await real("trend");
+    expect(trendTopics.map((t) => t.title).sort()).toEqual(["Derbi", "Merkez Bankası", "Uzay"]);
+    expect(trendTopics.every((t) => t.status === "published")).toBe(true);
+    // Aramayla eşleşen kümeler ayrı haber konusu açmaz
+    expect(await real("news")).toHaveLength(0);
 
-    const real = await db.select().from(topics).where(eq(topics.isMock, false));
-    const faiz = real.find((t) => t.title.includes("Merkez Bankası"))!;
-    const derbi = real.find((t) => t.title.includes("Fenerbahçe"))!;
-    expect(faiz.status).toBe("published");
-    expect(derbi.status).toBe("candidate");
-    // Başlık kaynaklardan seçilir ve bağıran önek temizlenir
-    expect(faiz.title).not.toMatch(/SON DAKİKA/i);
-    expect(faiz.slug).toMatch(/^[a-z0-9-]+$/);
-    // Kategori adreslerden çıkarılır
-    const cats = await db.execute<{ slug: string }>(
-      sql`select c.slug from categories c where c.id = ${faiz.categoryId}`,
-    );
-    expect(cats[0]?.slug).toBe("ekonomi");
-    // Özet uydurulmaz; maddeler yalnızca ölçülen veriden
-    expect(faiz.summary).toBeNull();
-    expect(faiz.summaryOrigin).toBe("none");
-    expect(faiz.reasons).toContain("4 farklı haber kaynağında yer aldı");
+    const derbi = trendTopics.find((t) => t.title === "Derbi")!;
+    expect(derbi.reasons[0]).toBe("Google’da Türkiye trend listesinde (yaklaşık 50.000+ arama)");
+    const links = await db
+      .select({ source: sourceItems.sourceName, publisherId: sourceItems.publisherId })
+      .from(topicItems)
+      .innerJoin(sourceItems, eq(sourceItems.id, topicItems.sourceItemId))
+      .where(eq(topicItems.topicId, derbi.id));
+    expect(links).toHaveLength(3); // 2 haber + Google'ın ilgili haberi
+    expect(links.some((l) => l.source === "Spor Sitesi" && l.publisherId === null)).toBe(true);
 
-    const links = await db.select().from(topicItems).where(eq(topicItems.topicId, faiz.id));
-    expect(links).toHaveLength(4);
     const events = (
-      await db.select().from(timelineEvents).where(eq(timelineEvents.topicId, faiz.id))
+      await db.select().from(timelineEvents).where(eq(timelineEvents.topicId, derbi.id))
     ).map((e) => e.type);
-    expect(events).toEqual(expect.arrayContaining(["first_source", "news_spread", "entered_top5"]));
-  });
+    expect(events).toEqual(expect.arrayContaining(["trend_listed", "entered_top5"]));
 
-  it("Trends verisi yokken arama ilgisi 'veri bekleniyor'; eşleşince konu yayına girer", async () => {
-    const [faizSnap] = await db
-      .select({ components: topicSnapshots.components, signals: topicSnapshots.signalsAvailable })
-      .from(topicSnapshots)
-      .innerJoin(topics, eq(topics.id, topicSnapshots.topicId))
-      .where(sql`${topics.title} like 'Merkez%' and ${topics.isMock} = false`);
-    expect(faizSnap?.components.search_interest?.available).toBe(false);
-    expect(faizSnap?.signals).toBe(2);
-
-    const [trends] = await db
-      .select({ id: dataProviders.id })
-      .from(dataProviders)
-      .where(eq(dataProviders.key, "google_trends"));
-    await db
-      .update(dataProviders)
-      .set({ lastSuccessAt: at(10) })
-      .where(eq(dataProviders.id, trends!.id));
-    await db.insert(trendSignals).values({
-      providerId: trends!.id,
-      term: "derbi",
-      geo: "TR",
-      approxTraffic: 50000,
-      observedAt: at(10),
-    });
-
-    const r = await build(at(15));
-    expect(r.created).toBe(0); // aynı olaylar için yeni konu açılmaz
-    const derbi = (await db.select().from(topics).where(eq(topics.isMock, false))).find((t) =>
-      t.title.includes("Fenerbahçe"),
-    )!;
-    expect(derbi.status).toBe("published");
-    expect(derbi.reasons.some((x) => x.includes("“derbi”") && x.includes("50.000"))).toBe(true);
+    // Haberi olmayan arama da konu olur (yalnızca arama sinyaliyle)
+    const uzay = trendTopics.find((t) => t.title === "Uzay")!;
+    expect(await db.select().from(topicItems).where(eq(topicItems.topicId, uzay.id))).toHaveLength(
+      0,
+    );
 
     const [snap] = await db
-      .select({ components: topicSnapshots.components, signals: topicSnapshots.signalsAvailable })
+      .select()
       .from(topicSnapshots)
-      .where(
-        sql`${topicSnapshots.topicId} = ${derbi.id} and ${topicSnapshots.capturedAt} = ${at(15).toISOString()}`,
-      );
+      .where(eq(topicSnapshots.topicId, derbi.id));
     expect(snap?.components.search_interest?.available).toBe(true);
-    expect(snap?.signals).toBe(3);
+    expect(snap?.components.social?.available).toBe(false);
   });
 
-  it("yeni benzer haber mevcut konuya katılır", async () => {
-    await addItem(8, "Merkez Bankası politika faizi kararı sonrası piyasalar", 20);
-    await build(at(25));
-    const faiz = (await db.select().from(topics).where(eq(topics.isMock, false))).find((t) =>
-      t.title.includes("Merkez"),
-    )!;
-    expect(await db.select().from(topicItems).where(eq(topicItems.topicId, faiz.id))).toHaveLength(
-      5,
-    );
-    expect((await db.select().from(topics).where(eq(topics.isMock, false))).length).toBe(2);
+  it("aramada olmayan ama çok kaynaklı olay 'haber' konusu olur", async () => {
+    for (const [i, title] of [
+      "Ankara'da fabrikada büyük yangın çıktı",
+      "Ankara'daki fabrika yangınına çok sayıda ekip sevk edildi",
+      "Ankara fabrika yangını kontrol altına alındı",
+      "Ankara'da fabrika yangını: dumanlar kilometrelerce uzaktan görüldü",
+    ].entries()) {
+      await addItem(7 + i, title, 5 + i, "gundem");
+    }
+    await build(at(15));
+    const news = await real("news");
+    expect(news).toHaveLength(1);
+    expect(news[0]?.status).toBe("published");
+    expect(news[0]?.reasons).toContain("Google’ın Türkiye trend listesinde değil");
   });
 
-  it("API gerçek konuları sıralı döndürür; örnek konular da korunur", async () => {
+  it("API: varsayılan liste trendler, haberler ayrı; kartta kaynaklı başlık", async () => {
     const app = await buildApp({
       repo: createTopicRepository(db),
       cacheTtlSeconds: 0,
       rateLimitMax: 1000,
       logLevel: "silent",
     });
-    const list = TopicListResponseSchema.parse(
-      (await app.inject("/api/v1/topics?limit=50")).json(),
+    const trends = TopicListResponseSchema.parse((await app.inject("/api/v1/topics")).json());
+    expect(trends.items.every((t) => t.kind === "trend")).toBe(true);
+    expect(trends.items[0]?.title).toBe("Derbi"); // en yüksek arama hacmi
+    expect(trends.items[0]?.headline?.source).toBe("Spor Sitesi");
+    const news = TopicListResponseSchema.parse(
+      (await app.inject("/api/v1/topics?kind=news")).json(),
     );
-    const real = list.items.filter((t) => !t.isMock);
-    expect(real.map((t) => t.title).some((t) => t.includes("Merkez Bankası"))).toBe(true);
-    expect(list.items.some((t) => t.isMock)).toBe(true); // mock'a dokunulmadı
-    const slug = real[0]!.slug;
+    expect(news.items.map((t) => t.kind)).toEqual(["news"]);
+
     const detail = TopicDetailResponseSchema.parse(
-      (await app.inject(`/api/v1/topics/${slug}`)).json(),
+      (await app.inject(`/api/v1/topics/${trends.items[0]!.slug}`)).json(),
     );
-    expect(detail.item.isArchived).toBe(false);
-    expect(detail.item.sources.length).toBeGreaterThan(0);
+    expect(detail.item.sources.map((s) => s.publisherName)).toContain("Spor Sitesi");
     await app.close();
   });
 
-  it("yeni haber gelmeyince soğur, sonra arşive düşer; arşiv sayfası ve detay açık kalır", async () => {
-    let r = await build(at(60 * 8));
-    expect(r.cooling).toBeGreaterThan(0);
-    r = await build(at(60 * 30));
-    expect(r.archived).toBeGreaterThan(0);
-    const real = await db.select().from(topics).where(eq(topics.isMock, false));
-    expect(real.every((t) => t.status === "archived")).toBe(true);
+  it("listeden çıkan arama soğur, sonra arşive düşer; arşivden açılır", async () => {
+    await trendBatch(60, [{ term: "derbi", traffic: 100000 }]);
+    const r = await build(at(65));
+    expect(r.cooling).toBeGreaterThanOrEqual(2);
+    const merkez = (await real("trend")).find((t) => t.title === "Merkez Bankası")!;
+    expect(merkez.status).toBe("cooling");
+    expect(merkez.reasons[0]).toBe("Google’ın Türkiye trend listesinden çıktı");
+    const left = await db
+      .select()
+      .from(timelineEvents)
+      .where(and(eq(timelineEvents.topicId, merkez.id), eq(timelineEvents.type, "trend_left")));
+    expect(left).toHaveLength(1);
+
+    // 5 saat sonra Trends verisi de eskidi: tüm trend konuları arşivde
+    await build(at(60 * 5));
+    expect((await real("trend")).every((t) => t.status === "archived")).toBe(true);
 
     const app = await buildApp({
       repo: createTopicRepository(db),
@@ -224,26 +244,22 @@ describe.skipIf(!URL_)("gündem üretim süreci", () => {
       rateLimitMax: 1000,
       logLevel: "silent",
     });
-    const list = TopicListResponseSchema.parse(
-      (await app.inject("/api/v1/topics?limit=50")).json(),
-    );
-    expect(list.items.some((t) => !t.isMock)).toBe(false);
-
     const day = ArchiveDayResponseSchema.parse(
       (await app.inject("/api/v1/archive/2026-10-05")).json(),
     );
-    const archived = day.items.filter((i) => !i.isMock);
-    expect(archived).toHaveLength(2);
+    expect(day.items.map((i) => i.title)).toEqual(
+      expect.arrayContaining(["Derbi", "Merkez Bankası", "Uzay"]),
+    );
     const detail = TopicDetailResponseSchema.parse(
-      (await app.inject(`/api/v1/topics/${archived[0]!.slug}`)).json(),
+      (await app.inject(`/api/v1/topics/${merkez.slug}`)).json(),
     );
     expect(detail.item.isArchived).toBe(true);
-    expect(detail.item.rank).toBeNull();
-
-    expect((await app.inject("/api/v1/archive/2026-13-40")).statusCode).toBe(404);
-    expect((await app.inject("/api/v1/archive/2099-01-01")).statusCode).toBe(404);
-    expect((await app.inject("/api/v1/archive/2020-01-01")).statusCode).toBe(404);
-    expect((await app.inject("/api/v1/archive/..%2F..%2Fetc")).statusCode).toBe(404);
     await app.close();
+  });
+
+  it("displayTerm Türkçe büyük harf kuralına uyar", () => {
+    expect(displayTerm("ali koç")).toBe("Ali Koç");
+    expect(displayTerm("istanbul")).toBe("İstanbul");
+    expect(displayTerm("iPhone 18")).toBe("iPhone 18");
   });
 });

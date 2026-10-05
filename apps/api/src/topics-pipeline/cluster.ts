@@ -22,9 +22,14 @@ export interface Cluster {
 }
 
 /** Benzerlik eşiği ve en az ortak çekirdek kelime sayısı */
+/**
+ * Birleşme eşiği: en az 3 ortak ana kelime varsa 0,5; yalnızca 2 ortak kelime varsa (ör. sadece
+ * "Merkez Bankası") daha sıkı 0,6 — genel bir ifadeyi paylaşan farklı haberler birleşmesin.
+ */
 export const SIMILARITY_THRESHOLD = 0.5;
+export const SIMILARITY_THRESHOLD_TWO_TOKENS = 0.6;
 export const MIN_SHARED_TOKENS = 2;
-export const MIN_ITEM_COVERAGE = 0.3;
+export const MIN_ITEM_COVERAGE = 0.25;
 
 export function computeIdf(docs: string[][]): Map<string, number> {
   const df = new Map<string, number>();
@@ -35,10 +40,12 @@ export function computeIdf(docs: string[][]): Map<string, number> {
   return idf;
 }
 
-/** Kümede belgelerin en az üçte birinde geçen kelimeler */
+/** Kümenin "ana kelimeleri" */
 export function coreTokens(cluster: Cluster): Set<string> {
   if (cluster.core) return cluster.core;
-  const min = Math.max(1, Math.ceil(cluster.items.length * 0.34));
+  // Tek haberlik kümede tüm kelimeler; büyüdükçe en az 2 başlıkta (ve üçte birinde) geçenler
+  const size = cluster.items.length;
+  const min = size === 1 ? 1 : Math.max(2, Math.ceil(size * 0.34));
   const core = new Set<string>();
   for (const [t, c] of cluster.tokenCounts) if (c >= min) core.add(t);
   cluster.core = core;
@@ -47,10 +54,19 @@ export function coreTokens(cluster: Cluster): Set<string> {
 
 /**
  * Benzerlik: paylaşılan ana kelimelerin ağırlığı / (başlığın veya çekirdeğin) küçük olanının ağırlığı.
- * En az 2 ortak ana kelime ve başlığın kendi ağırlığının en az %30'u ortak olmalı
+ * En az 2 ortak ana kelime ve başlığın kendi ağırlığının en az %25'i ortak olmalı
  * (yalnızca "Merkez Bankası" gibi genel ifadeyi paylaşan farklı haberler birleşmesin).
  */
 export function similarity(tokens: string[], core: Set<string>, idf: Map<string, number>): number {
+  return scoreAgainst(tokens, core, idf).score;
+}
+
+/** Benzerlik skoru + ortak ana kelime sayısı; eşik kontrolü dahil (geçmezse 0) */
+export function scoreAgainst(
+  tokens: string[],
+  core: Set<string>,
+  idf: Map<string, number>,
+): { score: number; shared: number } {
   let shared = 0;
   let sharedWeight = 0;
   let itemWeight = 0;
@@ -62,11 +78,13 @@ export function similarity(tokens: string[], core: Set<string>, idf: Map<string,
       sharedWeight += w;
     }
   }
-  if (shared < MIN_SHARED_TOKENS || itemWeight === 0) return 0;
-  if (sharedWeight / itemWeight < MIN_ITEM_COVERAGE) return 0;
+  if (shared < MIN_SHARED_TOKENS || itemWeight === 0) return { score: 0, shared };
+  if (sharedWeight / itemWeight < MIN_ITEM_COVERAGE) return { score: 0, shared };
   let coreWeight = 0;
   for (const t of core) coreWeight += idf.get(t) ?? 1;
-  return sharedWeight / Math.min(itemWeight, coreWeight);
+  const score = sharedWeight / Math.min(itemWeight, coreWeight);
+  const threshold = shared >= 3 ? SIMILARITY_THRESHOLD : SIMILARITY_THRESHOLD_TWO_TOKENS;
+  return { score: score >= threshold ? score : 0, shared };
 }
 
 /** kelime → o kelimeyi içeren kümeler (yalnızca ortak kelimesi olan kümeler karşılaştırılır) */
@@ -114,13 +132,13 @@ export function clusterItems(items: ClusterInput[]): Cluster[] {
     const candidates = new Set<Cluster>();
     for (const t of tokens) for (const c of index.get(t) ?? []) candidates.add(c);
     for (const c of candidates) {
-      const score = similarity(tokens, coreTokens(c), idf);
+      const { score } = scoreAgainst(tokens, coreTokens(c), idf);
       if (score > bestScore) {
         best = c;
         bestScore = score;
       }
     }
-    if (best && bestScore >= SIMILARITY_THRESHOLD) addItem(best, item, tokens, index);
+    if (best && bestScore > 0) addItem(best, item, tokens, index);
     else {
       const c: Cluster = { topicId: null, items: [], tokenCounts: new Map() };
       addItem(c, item, tokens, index);

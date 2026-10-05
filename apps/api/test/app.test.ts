@@ -89,12 +89,21 @@ describe("GET /api/v1/topics", () => {
 });
 
 describe("yükselenler / düşenler", () => {
-  it("az kaynaklı konu yükselenlerde yok", async () => {
+  it("yükselenler trend konularından; haber listesi ayrı", async () => {
+    const { app: a } = await setup();
+    const news = TopicListResponseSchema.parse((await a.inject("/api/v1/topics?kind=news")).json());
+    expect(news.items.map((t) => [t.slug, t.kind, t.rank])).toEqual([
+      ["ornek-haber-az-kaynakli", "news", 1],
+    ]);
+    expect((await a.inject("/api/v1/topics?kind=x")).statusCode).toBe(400);
+  });
+
+  it("az kaynaklı trend konusu da yükselenlerde (arama sinyali yeterli)", async () => {
     const { app } = await setup();
     const rising = TopicListResponseSchema.parse(
       (await app.inject("/api/v1/topics/rising")).json(),
     );
-    expect(rising.items.map((t) => t.slug)).toEqual(["ornek-yukselen"]);
+    expect(rising.items.map((t) => t.slug)).toEqual(["ornek-az-kaynakli", "ornek-yukselen"]);
     const falling = TopicListResponseSchema.parse(
       (await app.inject("/api/v1/topics/falling")).json(),
     );

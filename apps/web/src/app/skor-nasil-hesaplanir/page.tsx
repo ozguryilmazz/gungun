@@ -14,12 +14,13 @@ export const metadata: Metadata = {
 };
 
 const DESCRIPTIONS: Record<(typeof COMPONENT_KEYS)[number], string> = {
-  news_visibility:
-    "Son saatlerde konuyu yazan farklı yayıncı sayısı. Aynı sitenin çok sayıda haberi skoru şişirmez.",
-  velocity: "Konuyla ilgili kaynak sayısının son saatte, önceki saatlere göre ne kadar arttığı.",
   search_interest:
-    "Konunun Türkiye’deki Google arama trendlerinde yer alıp almadığı ve yaklaşık ilgi düzeyi.",
-  social: "Kamuya açık sosyal medya sinyalleri. Bu veri kaynağı henüz bağlanmadı.",
+    "Ana sinyal: aramanın Türkiye’de Google trend listesinde olması ve yaklaşık arama hacmi. Listeden çıkan aramanın arama ilgisi sıfırlanır.",
+  social:
+    "Sosyal platformlardaki ilgi. İlk kaynak olarak YouTube Türkiye trendleri ekleniyor; X ileride. Bağlanana kadar “Veri bekleniyor”.",
+  news_visibility:
+    "Konuyla ilgili haber yayımlayan farklı kaynak sayısı. Aynı sitenin çok sayıda haberi skoru şişirmez.",
+  velocity: "Aramanın trend listesine yeni girmesi ya da arama hacminin son saatlerde artması.",
 };
 
 export default function ScoreExplainerPage() {
@@ -27,9 +28,11 @@ export default function ScoreExplainerPage() {
     <main id="icerik" className={`container ${styles.page}`}>
       <h1 className={styles.title}>Gündem skoru nasıl hesaplanır?</h1>
       <p className={styles.lead}>
-        Gündem skoru, bir konunun şu anda internette <strong>ne kadar konuşulduğunu</strong> 0–100
-        arasında gösterir. Bir konunun <strong>ne kadar önemli</strong> olduğunu ölçmez: çok
-        konuşulan bir konu önemsiz, az konuşulan bir konu çok önemli olabilir.
+        Gündemci’deki ana liste, Türkiye’de <strong>Google’da trend olan aramalardan</strong>{" "}
+        oluşur; haberler, aramanın neden yapıldığını açıklamak için kullanılır. Gündem skoru, bir
+        konunun şu anda <strong>ne kadar arandığını ve konuşulduğunu</strong> 0–100 arasında
+        gösterir. Bir konunun <strong>ne kadar önemli</strong> olduğunu ölçmez: çok konuşulan bir
+        konu önemsiz, az konuşulan bir konu çok önemli olabilir.
       </p>
 
       <section className={styles.section}>
@@ -64,6 +67,15 @@ export default function ScoreExplainerPage() {
           karşılaştırılmasıdır ve yalnızca iki gerçek ölçüm varsa hesaplanır. Çok az kaynaktan doğan
           abartılı artışları önlemek için “Şu anda yükselenler” listesine yalnızca en az{" "}
           {RISING_MIN_SOURCES} kaynakta yer alan konular girer.
+        </p>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.h2}>Ne kadar güncel?</h2>
+        <p>
+          Google Trends listesi Google tarafında yaklaşık saatte bir yenilenir; gündemci bu listeyi
+          10–15 dakikada bir kontrol eder. Bu nedenle liste “gerçek zamana yakındır”, saniye saniye
+          canlı değildir. Her konunun son güncelleme zamanı yanında yazar.
         </p>
       </section>
 

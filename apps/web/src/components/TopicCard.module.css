@@ -99,6 +99,11 @@
   overflow: hidden;
 }
 
+.source {
+  font-weight: 600;
+  color: var(--text);
+}
+
 .meta {
   grid-area: meta;
   display: flex;

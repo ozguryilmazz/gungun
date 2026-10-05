@@ -31,7 +31,14 @@ export function TopicCard({ topic, now }: { topic: TopicSummary; now: Date }) {
       <span className={styles.trend}>
         <TrendBadge trend={topic.trend} changePct={topic.changePct} />
       </span>
-      {topic.summary ? <span className={styles.summary}>{topic.summary}</span> : null}
+      {topic.summary ? (
+        <span className={styles.summary}>{topic.summary}</span>
+      ) : topic.headline ? (
+        // Kaynağın kendi başlığı, kaynağıyla birlikte (bizim yazdığımız metin değil)
+        <span className={styles.summary}>
+          <span className={styles.source}>{topic.headline.source}:</span> {topic.headline.title}
+        </span>
+      ) : null}
       <span className={styles.meta}>
         <span>{topic.sourceCount} kaynak</span>
         <span aria-hidden="true">·</span>

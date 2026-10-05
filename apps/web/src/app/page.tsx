@@ -7,11 +7,12 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   // Ana liste zorunlu: alınamazsa hata sayfası. Diğer bölümler isteğe bağlı.
-  const [list, rising, falling, status] = await Promise.all([
+  const [list, rising, falling, status, news] = await Promise.all([
     getTopicList(),
     optional(getRising()),
     optional(getFalling()),
     optional(getStatus()),
+    optional(getTopicList({ kind: "news", limit: 6 })),
   ]);
   return (
     <TopicFeed
@@ -21,6 +22,7 @@ export default async function HomePage() {
       rising={rising}
       falling={falling}
       status={status}
+      news={news}
     />
   );
 }

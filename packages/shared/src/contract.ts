@@ -20,9 +20,21 @@ export const CategorySchema = z.object({
 
 export const TrendSchema = z.enum(["surging", "rising", "flat", "falling", "unknown"]);
 
+/** trend: Google'da trend olan arama · news: aramada olmayan ama çok kaynakta geçen haber */
+export const TopicKindSchema = z.enum(["trend", "news"]);
+
+/** Kartta gösterilen, kaynağı belirtilmiş en güncel haber başlığı (bizim yazdığımız metin değil) */
+export const HeadlineSchema = z.object({
+  title: z.string().min(1).max(300),
+  source: z.string().max(96),
+  url: SafeUrlSchema,
+});
+
 export const TopicSummarySchema = z.object({
   slug,
   title: z.string().min(1).max(200),
+  kind: TopicKindSchema,
+  headline: HeadlineSchema.nullable(),
   category: CategorySchema,
   rank: z.number().int().positive().nullable(),
   /** null = hiç sinyal yok, skor hesaplanmadı */
@@ -48,7 +60,15 @@ export const ScoreComponentViewSchema = z.object({
 });
 
 export const TimelineEventViewSchema = z.object({
-  type: z.enum(["first_source", "news_spread", "search_spike", "entered_top5", "peak"]),
+  type: z.enum([
+    "first_source",
+    "news_spread",
+    "search_spike",
+    "entered_top5",
+    "peak",
+    "trend_listed",
+    "trend_left",
+  ]),
   occurredAt: isoDate,
 });
 
@@ -163,6 +183,8 @@ export type ProviderStatus = z.infer<typeof ProviderStatusSchema>;
 export type StatusResponse = z.infer<typeof StatusResponseSchema>;
 export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;
 export type Category = z.infer<typeof CategorySchema>;
+export type TopicKind = z.infer<typeof TopicKindSchema>;
+export type Headline = z.infer<typeof HeadlineSchema>;
 export type TopicSummary = z.infer<typeof TopicSummarySchema>;
 export type TopicDetail = z.infer<typeof TopicDetailSchema>;
 export type ScoreComponentView = z.infer<typeof ScoreComponentViewSchema>;
@@ -178,6 +200,8 @@ export const TIMELINE_LABELS: Record<TimelineEventView["type"], string> = {
   search_spike: "Arama ilgisinde sıçrama",
   entered_top5: "Gündem sıralamasında ilk 5’e girdi",
   peak: "Zirve skora ulaştı",
+  trend_listed: "Google Türkiye trend listesine girdi",
+  trend_left: "Trend listesinden çıktı",
 };
 
 /** URL'deki slug parametresini veritabanına/API'ye gitmeden önce doğrular */

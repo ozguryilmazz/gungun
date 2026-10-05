@@ -70,14 +70,14 @@ describe("computeScore", () => {
   });
 
   it("ağırlıklı ortalama hesaplar", () => {
-    // (0.35*1 + 0.25*0 + 0.30*0.5) / 0.90 = 0.5555… → 56
+    // (0.15*1 + 0.10*0 + 0.50*0.5) / 0.75 = 0.5333… → 53
     const result = computeScore({
       news_visibility: 1,
       velocity: 0,
       search_interest: 0.5,
       social: null,
     });
-    expect(result.score).toBe(56);
+    expect(result.score).toBe(53);
   });
 
   it("0–1 dışındaki değeri reddeder", () => {

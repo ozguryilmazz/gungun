@@ -30,9 +30,12 @@ async function required<T>(promise: Promise<T | null>): Promise<T> {
 }
 
 export async function getTopicList(
-  options: { category?: string; limit?: number } = {},
+  options: { category?: string; limit?: number; kind?: "trend" | "news" } = {},
 ): Promise<TopicListResponse> {
-  const params = new URLSearchParams({ limit: String(clampLimit(options.limit ?? 20)) });
+  const params = new URLSearchParams({
+    kind: options.kind ?? "trend",
+    limit: String(clampLimit(options.limit ?? 20)),
+  });
   if (options.category !== undefined) params.set("category", options.category);
   return required(apiGet(`/api/v1/topics?${params}`, TopicListResponseSchema));
 }

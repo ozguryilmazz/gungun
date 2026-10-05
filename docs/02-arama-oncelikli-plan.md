@@ -1,4 +1,4 @@
-# gundemci.org — Arama Öncelikli Yapı Planı (v0.2, onay bekliyor)
+# gundemci.org — Arama Öncelikli Yapı Planı (v0.2, onaylandı)
 
 > Tarih: 2026-10-05 · Bu belge `01-mimari-plan.md`’deki ürün mantığını değiştirir; altyapı (veri toplama,
 > güvenlik, API, arayüz, arşiv) aynen kalır.
@@ -103,3 +103,20 @@ Mimari hazır: `SocialProvider` olarak eklenir. Bütçe kararı verildiğinde g�
 | 10  | Admin paneli                             | (eski aşama 9)                                           |
 
 Sonraki aşamaların numaraları birer kayar: güvenlik sertleştirme 11, SEO 12, performans 13, AI 14, canlıya geçiş 15.
+
+## 10. Uygulama notları
+
+### 9.1 (tamamlandı)
+
+- **Konu türü (`topics.kind`):** `trend` ana liste, `news` “Haberlerde öne çıkanlar”. Her arama terimi `topics.trend_key` ile tek konudur (migration `0002_trend_first`).
+- **Trend konusu:**
+  - Başlık terimin kendisidir (“ali koç” → “Ali Koç”).
+  - Eşleşen haber kümesi ve Google’ın ilgili haberleri (`source_items.source_name`) konuya bağlanır.
+  - Kartta en güncel haber başlığı kaynağıyla gösterilir.
+- **Haber konusu:** Aramayla eşleşmeyen, en az 4 yayıncıda geçen olaylar. Bir aramayla eşleşen küme ayrı haber konusu olarak gösterilmez.
+- **Yaşam döngüsü:** Arama listede oldukça “yayında”; listeden çıkınca “soğuyan”, 3 saat sonra arşiv. Trends verisi 2 saatten eskiyse liste güncel sayılmaz.
+- **Zaman çizelgesi:** “Google Türkiye trend listesine girdi” ve “Trend listesinden çıktı” olayları eklendi.
+- **Gruplama iyileştirmeleri:**
+  - Ana kelimeler, küme büyüyünce en az 2 başlıkta geçenlerdir.
+  - Birleşme eşiği: 3+ ortak kelimede 0,5; yalnızca 2 ortak kelimede 0,6.
+  - Başlık kapsamı en az %25.

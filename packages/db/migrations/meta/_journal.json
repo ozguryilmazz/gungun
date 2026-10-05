@@ -15,6 +15,13 @@
       "when": 1791189793256,
       "tag": "0001_ingest",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791197431148,
+      "tag": "0002_trend_first",
+      "breakpoints": true
     }
   ]
 }

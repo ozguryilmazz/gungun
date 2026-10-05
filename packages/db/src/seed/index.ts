@@ -138,6 +138,8 @@ export async function seedDatabase(db: Database, options: SeedOptions): Promise<
           reasons: topic.reasons,
           status: topic.status,
           summaryOrigin: "manual",
+          // Örnek konular ana (trend) listede görünsün
+          kind: "trend",
           isMock: true,
           firstSeenAt,
           publishedAt: minutesBefore(now, topic.firstSeenMinutesAgo - 30),

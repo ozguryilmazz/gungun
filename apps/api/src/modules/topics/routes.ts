@@ -16,6 +16,7 @@ const MAX_LIMIT = 50;
 // Bilinmeyen sorgu parametreleri reddedilir (strict)
 const listQuery = z
   .object({
+    kind: z.enum(["trend", "news"]).default("trend"),
     category: z
       .string()
       .regex(/^[a-z]{2,32}$/)
@@ -45,10 +46,10 @@ export async function topicRoutes(app: FastifyInstance, opts: { service: TopicSe
   app.get("/topics", async (req, reply) => {
     const query = listQuery.safeParse(req.query);
     if (!query.success) return sendError(reply, "invalid_request");
-    const { category, limit } = query.data;
+    const { kind, category, limit } = query.data;
     if (category !== undefined && !findCategory(category)) return sendError(reply, "not_found");
 
-    const { items, generatedAt } = await service.ranked();
+    const { items, generatedAt } = await service.ranked(kind);
     const filtered =
       category === undefined ? items : items.filter((t) => t.category.slug === category);
     return reply

@@ -39,6 +39,9 @@ function toSummary(row: TopicRow, rank: number | null): TopicSummary {
   return {
     slug: row.slug,
     title: row.title,
+    kind: row.kind,
+    headline:
+      row.headline && SafeUrlSchema.safeParse(row.headline.url).success ? row.headline : null,
     category: { slug: row.categorySlug, name: row.categoryName },
     rank,
     score,
@@ -66,11 +69,14 @@ export function rankTopics(rows: TopicRow[]): TopicSummary[] {
 }
 
 export function selectRising(items: TopicSummary[], limit: number): TopicSummary[] {
-  return items
-    .filter((t) => (t.trend === "surging" || t.trend === "rising") && t.changePct !== null)
-    .filter((t) => t.sourceCount >= RISING_MIN_SOURCES)
-    .sort((a, b) => b.changePct! - a.changePct!)
-    .slice(0, limit);
+  return (
+    items
+      .filter((t) => (t.trend === "surging" || t.trend === "rising") && t.changePct !== null)
+      // Haber konularında az kaynaklı abartılı yüzdeler elenir; trend konularında arama hacmi yeterli sinyal
+      .filter((t) => t.kind === "trend" || t.sourceCount >= RISING_MIN_SOURCES)
+      .sort((a, b) => b.changePct! - a.changePct!)
+      .slice(0, limit)
+  );
 }
 
 export function selectFalling(items: TopicSummary[], limit: number): TopicSummary[] {
@@ -93,6 +99,7 @@ export function providerState(p: ProviderRow, now: Date): ProviderStatus["state"
 
 export class TopicService {
   private readonly listCache: TtlCache<RankedList>;
+
   private readonly detailCache: TtlCache<TopicDetail | null>;
 
   constructor(
@@ -100,14 +107,14 @@ export class TopicService {
     cacheTtlSeconds: number,
     private readonly clock: () => Date = () => new Date(),
   ) {
-    this.listCache = new TtlCache(cacheTtlSeconds * 1000, 1);
+    this.listCache = new TtlCache(cacheTtlSeconds * 1000, 2);
     this.detailCache = new TtlCache(cacheTtlSeconds * 1000, 500);
   }
 
-  /** Tüm görünür konular, global sıralamayla (önbellekli) */
-  async ranked(): Promise<RankedList> {
-    return this.listCache.getOrLoad("all", async () => ({
-      items: rankTopics(await this.repo.listVisibleTopics(WINDOW_MINUTES)),
+  /** Bir türdeki tüm görünür konular, kendi sıralamasıyla (önbellekli) */
+  async ranked(kind: "trend" | "news" = "trend"): Promise<RankedList> {
+    return this.listCache.getOrLoad(kind, async () => ({
+      items: rankTopics(await this.repo.listVisibleTopics(WINDOW_MINUTES, kind)),
       generatedAt: this.clock(),
     }));
   }
@@ -117,7 +124,7 @@ export class TopicService {
       const row = await this.repo.getTopicDetail(slug, WINDOW_MINUTES);
       if (!row) return null;
       // Sıra numarası global listeden gelir (tek kaynaktan tutarlı sıra)
-      const { items } = await this.ranked();
+      const { items } = await this.ranked(row.kind);
       const rank = items.find((t) => t.slug === slug)?.rank ?? null;
       return this.toDetail(row, rank);
     });
