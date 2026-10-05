@@ -90,10 +90,22 @@ export const rssNewsProvider: IngestProvider = {
             .returning({ id: sourceItems.id });
           inserted = rows.length;
         }
-        const dropped = parsed.length - items.length;
-        if (dropped > 0)
-          log.warn({ feed: feed.name, dropped }, "alan adı dışı bağlantılar atlandı");
-        return { name: feed.name, ok: true, items: inserted };
+        const offDomain = parsed.length - items.length;
+        const offDomainHosts = [
+          ...new Set(parsed.filter((i) => !items.includes(i)).map((i) => new URL(i.url).hostname)),
+        ].slice(0, 3);
+        if (offDomain > 0)
+          log.warn(
+            { feed: feed.name, offDomain, offDomainHosts },
+            "alan adı dışı bağlantılar atlandı",
+          );
+        return {
+          name: feed.name,
+          ok: true,
+          items: inserted,
+          parsed: parsed.length,
+          ...(offDomain > 0 ? { offDomain, offDomainHosts } : {}),
+        };
       } catch (error) {
         const { code, message } = describeError(error);
         log.warn({ feed: feed.name, code, message }, "feed alınamadı");

@@ -112,6 +112,17 @@ describe.skipIf(!URL_)("veri çekme entegrasyonu", () => {
     const failed = result.details.filter((d) => !d.ok).map((d) => d.name);
     expect(failed.sort()).toEqual(["Cumhuriyet", "Sözcü"]);
     expect(result.itemsFetched).toBe(30);
+    // Teşhis bilgisi: akıştaki öğe sayısı ve alan adı dışı bağlantı
+    const aa = result.details.find((d) => d.name === "Anadolu Ajansı");
+    expect(aa).toEqual(
+      expect.objectContaining({
+        ok: true,
+        items: 3,
+        parsed: 4,
+        offDomain: 1,
+        offDomainHosts: ["kotu-site.example"],
+      }),
+    );
 
     const urls = (await db.select({ url: sourceItems.url }).from(sourceItems)).map((r) => r.url);
     expect(urls.some((u) => u.includes("kotu-site"))).toBe(false);

@@ -31,9 +31,19 @@ try {
       continue;
     }
     for (const d of result.details) {
-      console.log(
-        `  ${d.ok ? "✔" : "✖"} ${d.name.padEnd(22)} ${d.ok ? `${d.items} yeni kayıt` : d.error}`,
-      );
+      if (!d.ok) {
+        console.log(`  ✖ ${d.name.padEnd(22)} ${d.error}`);
+        continue;
+      }
+      const notes: string[] = [];
+      if (d.parsed !== undefined) notes.push(`akışta ${d.parsed} öğe`);
+      if (d.offDomain) {
+        notes.push(`${d.offDomain} başka alan adına gidiyor (${d.offDomainHosts?.join(", ")})`);
+      }
+      // Akış boşsa veya tüm bağlantılar başka alan adına gidiyorsa uyarı işareti
+      const warn = d.parsed === 0 || (d.parsed !== undefined && d.offDomain === d.parsed);
+      const suffix = notes.length ? ` — ${notes.join(", ")}` : "";
+      console.log(`  ${warn ? "⚠" : "✔"} ${d.name.padEnd(22)} ${d.items} yeni kayıt${suffix}`);
     }
     console.log(`  → durum: ${result.status}, toplam yeni kayıt: ${result.itemsFetched}`);
     if (result.status === "failed") failed = true;

@@ -141,7 +141,14 @@ export const fetchRuns = pgTable(
 export interface FetchRunDetail {
   name: string;
   ok: boolean;
+  /** Yeni eklenen kayıt */
   items: number;
+  /** Akışta bulunan geçerli öğe */
+  parsed?: number;
+  /** Başka alan adına gittiği için atlanan öğe */
+  offDomain?: number;
+  /** Örnek atlanan alan adları (teşhis için, en fazla 3) */
+  offDomainHosts?: string[];
   error?: string;
 }
 
