@@ -175,3 +175,23 @@ describe("matchTrend", () => {
     expect(matchTrend(c, [trend("fenerbahçe galatasaray")])?.term).toBe("fenerbahçe galatasaray");
   });
 });
+
+describe("trend başlığı ve kart başlığı", () => {
+  it("terimin yazımı haber başlıklarından öğrenilir", async () => {
+    const { displayTerm } = await import("../src/topics-pipeline/pipeline.ts");
+    expect(displayTerm("aöf", ["AÖF KAYIT YENİLEME EKRANI 2026", "AÖF sınav sonuçları açıklandı"])).toBe("AÖF");
+    expect(displayTerm("trendyol", ["Trendyol'dan yeni kampanya"])).toBe("Trendyol");
+    expect(displayTerm("ali koç", [])).toBe("Ali Koç");
+  });
+
+  it("trend kartında yalnızca terimi içeren haber başlığı gösterilir", async () => {
+    const { pickHeadline } = await import("../src/modules/topics/repository.ts");
+    const candidates = [
+      { title: "TEKNOFEST Şanlıurfa'da güvenlik ASELSAN'a emanet edildi", source: "TRT Haber", url: "https://a.example/1" },
+      { title: "Trendyol'dan indirim açıklaması", source: "NTV", url: "https://a.example/2" },
+    ];
+    expect(pickHeadline(candidates, "trendyol")?.source).toBe("NTV");
+    expect(pickHeadline(candidates.slice(0, 1), "trendyol")).toBeNull();
+    expect(pickHeadline(candidates, null)?.source).toBe("TRT Haber");
+  });
+});

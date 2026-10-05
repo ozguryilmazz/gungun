@@ -3,6 +3,7 @@
 import { sql } from "drizzle-orm";
 import type { Database } from "@gundemci/db";
 import type { ScoreComponents } from "@gundemci/shared";
+import { titleMentionsTerm } from "../../topics-pipeline/pipeline.ts";
 
 export interface SnapshotRef {
   capturedAt: Date;
@@ -82,9 +83,8 @@ type RawTopic = {
   slug: string;
   title: string;
   kind: "trend" | "news";
-  h_title: string | null;
-  h_source: string | null;
-  h_url: string | null;
+  trend_term: string | null;
+  h_candidates: { title: string; source: string | null; url: string }[] | null;
   category_slug: string;
   category_name: string;
   summary: string | null;
@@ -106,15 +106,28 @@ type RawTopic = {
 
 const asDate = (v: Date | string) => (v instanceof Date ? v : new Date(v));
 
+/**
+ * Kartta gösterilecek başlık: en güncel haber. Trend konularında başlığında aranan terim geçen
+ * ilk haber seçilir (Google'ın bazen alakasız eşleştirdiği haberler gösterilmez).
+ */
+export function pickHeadline(
+  candidates: { title: string; source: string | null; url: string }[],
+  trendTerm: string | null,
+): TopicRow["headline"] {
+  const pick = trendTerm
+    ? candidates.find((c) => titleMentionsTerm(c.title, trendTerm))
+    : candidates[0];
+  return pick
+    ? { title: pick.title, source: pick.source ?? "Bilinmeyen kaynak", url: pick.url }
+    : null;
+}
+
 function mapTopic(r: RawTopic): TopicRow {
   return {
     slug: r.slug,
     title: r.title,
     kind: r.kind,
-    headline:
-      r.h_title && r.h_url
-        ? { title: r.h_title, source: r.h_source ?? "Bilinmeyen kaynak", url: r.h_url }
-        : null,
+    headline: pickHeadline(r.h_candidates ?? [], r.kind === "trend" ? r.trend_term : null),
     categorySlug: r.category_slug,
     categoryName: r.category_name,
     summary: r.summary,
@@ -139,7 +152,7 @@ function mapTopic(r: RawTopic): TopicRow {
 function topicSelect(windowMinutes: number) {
   return sql`
     select t.id, t.slug, t.title, t.kind, t.summary, t.is_mock, t.updated_at, t.first_seen_at,
-           h.h_title, h.h_source, h.h_url,
+           t.trend_key as trend_term, h.h_candidates,
            t.reasons, t.summary_origin, t.status,
            c.slug as category_slug, c.name as category_name,
            l.captured_at as latest_at, l.score as latest_score,
@@ -164,13 +177,16 @@ function topicSelect(windowMinutes: number) {
       limit 1
     ) p on true
     left join lateral (
-      select si.title as h_title, coalesce(pub.name, si.source_name) as h_source, si.url as h_url
-      from topic_items ti
-      join source_items si on si.id = ti.source_item_id
-      left join publishers pub on pub.id = si.publisher_id
-      where ti.topic_id = t.id
-      order by coalesce(si.published_at, si.fetched_at) desc nulls last, si.id desc
-      limit 1
+      select json_agg(json_build_object('title', x.title, 'source', x.source, 'url', x.url)) as h_candidates
+      from (
+        select si.title, coalesce(pub.name, si.source_name) as source, si.url
+        from topic_items ti
+        join source_items si on si.id = ti.source_item_id
+        left join publishers pub on pub.id = si.publisher_id
+        where ti.topic_id = t.id
+        order by coalesce(si.published_at, si.fetched_at) desc nulls last, si.id desc
+        limit 10
+      ) x
     ) h on true
   `;
 }

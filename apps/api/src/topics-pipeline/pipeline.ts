@@ -105,15 +105,49 @@ export function trendKey(term: string): string {
   return term.toLocaleLowerCase("tr-TR").trim().replace(/\s+/g, " ").slice(0, 200);
 }
 
-/** Google trend terimleri çoğunlukla küçük harftir: "ali koç" → "Ali Koç" */
-export function displayTerm(term: string): string {
+const isLetter = (ch: string | undefined) => !!ch && /[a-zçğıöşüâîû0-9]/i.test(ch);
+
+/**
+ * Google trend terimleri çoğunlukla küçük harftir ("aöf", "ali koç"). Doğru yazım, terimin geçtiği
+ * haber başlıklarından öğrenilir (tamamı büyük harf olmayan başlıklarda en sık görülen yazım: "AÖF").
+ * Bulunamazsa kelimelerin baş harfi büyütülür ("Ali Koç").
+ */
+export function displayTerm(term: string, sampleTitles: string[] = []): string {
   const t = term.trim().replace(/\s+/g, " ");
   if (t !== t.toLocaleLowerCase("tr-TR")) return t.slice(0, 200);
+  const needle = t.toLocaleLowerCase("tr-TR");
+  const counts = new Map<string, number>();
+  for (const title of sampleTitles) {
+    const letters = title.replace(/[^a-zA-ZçğıöşüÇĞİÖŞÜ]/g, "");
+    const upper = title.replace(/[^A-ZÇĞİÖŞÜ]/g, "");
+    if (letters.length >= 8 && upper.length / letters.length > 0.7) continue; // bağıran başlık
+    const lower = title.toLocaleLowerCase("tr-TR");
+    if (lower.length !== title.length) continue; // güvenli dilimleme için
+    let from = 0;
+    for (let i = lower.indexOf(needle, from); i !== -1; i = lower.indexOf(needle, from)) {
+      if (!isLetter(lower[i - 1]) && !isLetter(lower[i + needle.length])) {
+        const original = title.slice(i, i + needle.length);
+        counts.set(original, (counts.get(original) ?? 0) + 1);
+      }
+      from = i + 1;
+    }
+  }
+  const learned = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  if (learned && learned !== needle) return learned.slice(0, 200);
   return t
     .split(" ")
     .map((w) => w.charAt(0).toLocaleUpperCase("tr-TR") + w.slice(1))
     .join(" ")
     .slice(0, 200);
+}
+
+/** Başlık, trend terimini (kurallara uygun biçimde) içeriyor mu? */
+export function titleMentionsTerm(title: string, term: string): boolean {
+  const termWords = words(term);
+  if (termWords.length === 0) return false;
+  if (termWords.length === 1) return words(title).some((w) => isTermWithCase(w, termWords[0]!));
+  const tokens = new Set(tokenize(title));
+  return tokenize(term).every((t) => tokens.has(t));
 }
 
 /** Arama ilgisi: log ölçek, 1 milyon arama ≈ 1.0; trafik bilinmiyorsa 0.5 */
@@ -133,13 +167,7 @@ const round4 = (n: number) => Number(n.toFixed(4));
  */
 export function trendMatchRatio(cluster: Cluster, trend: TrendObservation): number {
   if (trend.tokens.length === 0 || isMediaTerm(trend.term)) return 0;
-  const termWords = words(trend.term);
-  const single = termWords.length === 1 ? termWords[0]! : null;
-  const hits = cluster.items.filter((i) => {
-    if (single) return words(i.title).some((w) => isTermWithCase(w, single));
-    const tokens = new Set(tokenize(i.title));
-    return trend.tokens.every((t) => tokens.has(t));
-  }).length;
+  const hits = cluster.items.filter((i) => titleMentionsTerm(i.title, trend.term)).length;
   return hits / cluster.items.length;
 }
 
@@ -509,6 +537,7 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
           .select({
             id: topics.id,
             trendKey: topics.trendKey,
+            title: topics.title,
             status: topics.status,
             publishedAt: topics.publishedAt,
             summaryOrigin: topics.summaryOrigin,
@@ -534,6 +563,8 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
       if (!existing && !trend.current) continue;
       if (trend.current) result.trends++;
 
+      // Google'ın "ilgili haberleri" bazen alakasızdır: yalnızca başlığında terim geçenler kullanılır
+      trend.related = trend.related.filter((r) => titleMentionsTerm(r.title, trend.term));
       const cluster = bestClusterForTrend(clusters, trend);
       if (cluster) claimedClusters.add(cluster);
       const newsItems = cluster?.items ?? [];
@@ -542,7 +573,10 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
         let topicId = existing?.id;
         const current: Status = (existing?.status as Status | undefined) ?? "candidate";
         if (!topicId) {
-          const title = displayTerm(trend.term);
+          const title = displayTerm(trend.term, [
+            ...newsItems.map((i) => i.title),
+            ...trend.related.map((r) => r.title),
+          ]);
           const [created] = await tx
             .insert(topics)
             .values({
@@ -615,6 +649,15 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
         if (current === "hidden") return;
 
         const status = nextTrendStatus(current, trend, now);
+        // Başlık hâlâ otomatik baş harf büyütmesiyse ve haberlerden doğru yazım öğrenildiyse düzelt ("Aöf" → "AÖF")
+        const learnedTitle = displayTerm(trend.term, [
+          ...newsItems.map((i) => i.title),
+          ...trend.related.map((r) => r.title),
+        ]);
+        const titleUpdate =
+          existing && existing.title === displayTerm(trend.term) && learnedTitle !== existing.title
+            ? { title: learnedTitle }
+            : {};
         const categoryUpdate =
           existing && existing.categoryId === categoryId("diger")
             ? {
@@ -629,6 +672,7 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
         await tx
           .update(topics)
           .set({
+            ...titleUpdate,
             ...categoryUpdate,
             ...((existing?.summaryOrigin ?? "none") === "none"
               ? { reasons: trendReasons(trend, newsItems, now) }
