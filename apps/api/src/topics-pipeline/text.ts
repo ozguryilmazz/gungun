@@ -442,3 +442,75 @@ export function isTermWithCase(word: string, term: string): boolean {
   if (!word.startsWith(term)) return false;
   return CASE_SUFFIXES.includes(word.slice(term.length));
 }
+
+/** İngilizce/Almanca/Fransızca sık bağlaç ve edatlar (Türkçede bu biçimde kullanılmaz) */
+const FOREIGN_STOPWORDS = new Set([
+  "the",
+  "and",
+  "of",
+  "to",
+  "from",
+  "in",
+  "on",
+  "for",
+  "with",
+  "is",
+  "are",
+  "was",
+  "were",
+  "their",
+  "his",
+  "her",
+  "its",
+  "after",
+  "how",
+  "what",
+  "why",
+  "who",
+  "at",
+  "by",
+  "as",
+  "this",
+  "that",
+  "will",
+  "has",
+  "have",
+  "be",
+  "an",
+  "into",
+  "over",
+  "about",
+  "most",
+  "all",
+  "der",
+  "die",
+  "das",
+  "und",
+  "mit",
+  "für",
+  "ist",
+  "von",
+  "den",
+  "im",
+  "le",
+  "la",
+  "les",
+  "des",
+  "et",
+  "pour",
+  "avec",
+  "est",
+]);
+
+/**
+ * Başlık Türkçe mi? (Kural tabanlı, yapay zekâ yok.) Türkçe harf (ç ğ ı ö ş ü İ) varsa Türkçe sayılır;
+ * yoksa en az 2 yabancı bağlaç/edat içeren başlık yabancı dilde sayılır.
+ */
+export function looksTurkish(title: string): boolean {
+  if (/[çğıöşüÇĞİÖŞÜ]/.test(title)) return true;
+  const ws = title
+    .toLowerCase()
+    .split(/[^a-zäß0-9]+/)
+    .filter(Boolean);
+  return ws.filter((w) => FOREIGN_STOPWORDS.has(w)).length < 2;
+}

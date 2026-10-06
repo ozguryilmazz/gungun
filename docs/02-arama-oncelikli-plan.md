@@ -172,3 +172,10 @@ Kural tabanlı (`apps/api/src/topics-pipeline/term-filter.ts`), yapay zekâ yok:
   - Sekme arka plandayken kontrol yapılmaz. Tarayıcı backend API’ye doğrudan bağlanmaz.
 - **Paylaşım:** Konu sayfasında paylaş düğmeleri (telefonda sistem menüsü, WhatsApp, X, bağlantıyı kopyala). Konu ve ana sayfa için otomatik paylaşım görseli (Open Graph, 1200×630). Yalnızca ölçülen veri: başlık, kategori, skor, yaklaşık arama sayısı.
   - `SITE_URL` (.env) paylaşım bağlantılarının tam adresidir; canlıda `https://gundemci.org`.
+
+### Başlık eşleşmesi sıkılaştırıldı
+
+- Çok kelimeli aramada terimin **her kelimesi** başlıkta geçmeli; sayılar birebir (“6 ekim” ≠ “1 Ekim”), kısa kelimeler aynen.
+- Aramayı yalnızca **Türkçe** başlık açıklayabilir (kural tabanlı: Türkçe harf yoksa ve en az 2 yabancı bağlaç/edat varsa başlık yabancı sayılır). Google’ın ilgili haberleri yabancı sitelerden de gelebildiği için gerekli.
+- Takvim soruları (“6 ekim ne günü”, “hangi güne denk geliyor”) tarih araması olarak elenir.
+- Daha önce bağlanmış uymayan ilgili haberler her güncellemede konudan çıkarılır.

@@ -201,3 +201,30 @@ describe("trend başlığı ve kart başlığı", () => {
     expect(pickHeadline(candidates, null)?.source).toBe("TRT Haber");
   });
 });
+
+describe("başlık aramayı açıklıyor mu (dil ve tam eşleşme)", () => {
+  it("çok kelimeli aramada her kelime gerekir; sayılar birebir", async () => {
+    const { titleMentionsTerm } = await import("../src/topics-pipeline/pipeline.ts");
+    expect(
+      titleMentionsTerm("Ege'de 1 Ekim'de sağanak ve fırtınaya dikkat", "6 ekim ne günü"),
+    ).toBe(false);
+    expect(titleMentionsTerm("Motorine büyük indirim geldi", "motorine indirim")).toBe(true);
+    expect(titleMentionsTerm("Arda Güler'in golü maça damga vurdu", "arda güler")).toBe(true);
+    expect(
+      titleMentionsTerm("Derbi özeti: Fenerbahçe 2-1 Galatasaray", "fenerbahçe galatasaray"),
+    ).toBe(true);
+    expect(titleMentionsTerm("3 Ekim'de neler oldu", "6 ekim")).toBe(false);
+  });
+
+  it("Türkçe olmayan başlık aramayı açıklamaz", async () => {
+    const { headlineExplainsTerm } = await import("../src/topics-pipeline/pipeline.ts");
+    const { looksTurkish } = await import("../src/topics-pipeline/text.ts");
+    const en =
+      "From Robert Pires to Leandro Trossard: Arsenal fans debate their most underrated player of all-time";
+    expect(looksTurkish(en)).toBe(false);
+    expect(headlineExplainsTerm(en, "leandro trossard")).toBe(false);
+    expect(looksTurkish("Leandro Trossard Galatasaray'a mı geliyor?")).toBe(true);
+    expect(looksTurkish("Arsenal Trossard transferini resmen duyurdu")).toBe(true);
+    expect(looksTurkish("Trossard bei Bayern: Der Transfer ist fix und offiziell")).toBe(false);
+  });
+});

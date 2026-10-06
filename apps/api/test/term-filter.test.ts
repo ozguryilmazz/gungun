@@ -46,6 +46,8 @@ describe("trend arama filtresi (gerçek Google Trends TR listesinden örnekler)"
     ["pazartesi", "date_or_weekday"],
     ["3 ekim", "date_or_weekday"],
     ["28 eylül", "date_or_weekday"],
+    ["6 ekim ne günü", "date_or_weekday"],
+    ["bugün ne günü", "date_or_weekday"],
   ])("elenir: %s (%s)", (term, reason) => {
     expect(reasonOf(term)).toEqual({ verdict: "exclude", reason });
   });

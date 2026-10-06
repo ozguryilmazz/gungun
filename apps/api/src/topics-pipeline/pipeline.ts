@@ -38,7 +38,16 @@ import {
   type Cluster,
   type ClusterInput,
 } from "./cluster.ts";
-import { calmTitle, isMediaTerm, isTermWithCase, slugify, tokenize, words } from "./text.ts";
+import {
+  calmTitle,
+  isMediaTerm,
+  isTermWithCase,
+  looksTurkish,
+  slugify,
+  stem,
+  tokenize,
+  words,
+} from "./text.ts";
 
 /** Filtreyle gizlenen konuların "reasons" alanındaki işaret (elle gizlenenlerden ayırmak için) */
 export const FILTER_MARK = "Filtre: ";
@@ -173,13 +182,29 @@ export function displayTerm(term: string, sampleTitles: string[] = []): string {
     .slice(0, 200);
 }
 
-/** Başlık, trend terimini (kurallara uygun biçimde) içeriyor mu? */
+/**
+ * Başlık, trend terimini (kurallara uygun biçimde) içeriyor mu?
+ * - Tek kelime: kelimenin kendisi veya hal ekli hâli ("derbi" → "derbide"; iyelik eki kabul edilmez).
+ * - Çok kelime: terimin HER kelimesi başlıkta geçmeli. Sayılar birebir ("6 ekim" ≠ "1 Ekim"),
+ *   kısa kelimeler ("ne", "ve") aynen; diğerleri hal ekli hâli veya aynı kökle.
+ */
 export function titleMentionsTerm(title: string, term: string): boolean {
   const termWords = words(term);
   if (termWords.length === 0) return false;
-  if (termWords.length === 1) return words(title).some((w) => isTermWithCase(w, termWords[0]!));
-  const tokens = new Set(tokenize(title));
-  return tokenize(term).every((t) => tokens.has(t));
+  const titleWords = words(title);
+  if (termWords.length === 1) return titleWords.some((w) => isTermWithCase(w, termWords[0]!));
+  const titleStems = new Set(tokenize(title));
+  return termWords.every((tw) => {
+    if (/^\d+$/.test(tw) || tw.length < 3) return titleWords.includes(tw);
+    if (titleWords.some((w) => isTermWithCase(w, tw))) return true;
+    const s = stem(tw);
+    return s !== null && titleStems.has(s);
+  });
+}
+
+/** Haber başlığı aramayı AÇIKLAYABİLİR mi: Türkçe olmalı ve terimi içermeli */
+export function headlineExplainsTerm(title: string, term: string): boolean {
+  return looksTurkish(title) && titleMentionsTerm(title, term);
 }
 
 /** Arama ilgisi: log ölçek, 1 milyon arama ≈ 1.0; trafik bilinmiyorsa 0.5 */
@@ -686,7 +711,7 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
       // yalnızca başlığında terim geçenler kullanılır
       const seenUrls = new Set<string>();
       trend.related = [...trend.related, ...(searchNews.get(trend.key) ?? [])]
-        .filter((r) => titleMentionsTerm(r.title, trend.term))
+        .filter((r) => headlineExplainsTerm(r.title, trend.term))
         .filter((r) => !seenUrls.has(r.url) && seenUrls.add(r.url))
         .slice(0, 15);
       const cluster = bestClusterForTrend(clusters, trend);
@@ -794,7 +819,7 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
               and(eq(topicItems.topicId, topicId), eq(sourceItems.providerId, trendsProvider.id)),
             );
           const stale = linkedRelated
-            .filter((r) => !titleMentionsTerm(r.title, trend.term))
+            .filter((r) => !headlineExplainsTerm(r.title, trend.term))
             .map((r) => r.id);
           if (stale.length) {
             await tx

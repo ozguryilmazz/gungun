@@ -249,6 +249,11 @@ const DATE_PATTERNS = [
   new RegExp(`^\\d{1,2} (${MONTHS})( \\d{4})?$`),
   new RegExp(`^(${MONTHS})( \\d{4})?$`),
   /^(pazartesi|salı|çarşamba|perşembe|cuma|cumartesi|pazar)$/,
+  // Takvim soruları: "6 ekim ne günü", "bugün ne günü", "ramazan bayramı hangi güne denk geliyor"
+  /(^|\s)ne günü(\s|$)/,
+  /hangi gün(e|ü)?( denk)?/,
+  /kaç gün kaldı/,
+  /^bugün (ayın kaçı|günlerden ne)/,
 ];
 
 /** Bir trend aramasının gündem listesine nasıl gireceği */

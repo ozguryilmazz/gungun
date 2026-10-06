@@ -3,7 +3,7 @@
 import { sql } from "drizzle-orm";
 import type { Database } from "@gundemci/db";
 import type { ScoreComponents } from "@gundemci/shared";
-import { titleMentionsTerm } from "../../topics-pipeline/pipeline.ts";
+import { headlineExplainsTerm } from "../../topics-pipeline/pipeline.ts";
 
 export interface SnapshotRef {
   capturedAt: Date;
@@ -133,7 +133,7 @@ export function pickHeadline(
   trendTerm: string | null,
 ): TopicRow["headline"] {
   const pick = trendTerm
-    ? candidates.find((c) => titleMentionsTerm(c.title, trendTerm))
+    ? candidates.find((c) => headlineExplainsTerm(c.title, trendTerm))
     : candidates[0];
   return pick
     ? { title: pick.title, source: pick.source ?? "Bilinmeyen kaynak", url: pick.url }

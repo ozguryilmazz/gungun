@@ -18,7 +18,7 @@ import {
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { checkRobots } from "../lib/robots.ts";
 import { SafeFetchError } from "../lib/safe-http.ts";
-import { titleMentionsTerm, trendKey } from "../topics-pipeline/pipeline.ts";
+import { headlineExplainsTerm, trendKey } from "../topics-pipeline/pipeline.ts";
 import { classifyTerm } from "../topics-pipeline/term-filter.ts";
 import { describeError } from "./errors.ts";
 import { urlHash } from "./normalize.ts";
@@ -189,7 +189,7 @@ export async function runTrendNewsSearch(
       const raw = await searchWithRetry(term);
       const items = raw
         // Yalnızca başlığında terim geçen ve güncel olan haberler aramayı açıklayabilir
-        .filter((it) => titleMentionsTerm(it.title, term))
+        .filter((it) => headlineExplainsTerm(it.title, term))
         .filter((it) => !it.publishedAt || it.publishedAt >= oldest)
         .slice(0, MAX_RESULTS_PER_TERM);
 
