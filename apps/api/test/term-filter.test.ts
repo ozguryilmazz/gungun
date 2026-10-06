@@ -53,8 +53,8 @@ describe("trend arama filtresi (gerçek Google Trends TR listesinden örnekler)"
   });
 
   it.each(["zeytin", "kredi", "istanbul", "osimhen", "aöf", "enflasyon", "hakem"])(
-    "tek kelime yalnızca haberle açıklanırsa: %s",
-    (term) => expect(reasonOf(term)).toEqual({ verdict: "needs_news", reason: "single_word" }),
+    "tek kelime de aday (listelenmesi için yine haber gerekir): %s",
+    (term) => expect(reasonOf(term)).toEqual({ verdict: "keep", reason: null }),
   );
 
   it.each([

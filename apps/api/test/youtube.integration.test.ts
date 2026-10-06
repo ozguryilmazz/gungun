@@ -169,6 +169,14 @@ describe.skipIf(!URL_)("YouTube entegrasyonu", () => {
         geo: "TR",
         approxTraffic: 50000,
         observedAt: now,
+        // Listelenmesi için aramayı açıklayan bir haber gerekir
+        related: [
+          {
+            title: "Fenerbahçe Galatasaray derbisi nefes kesti",
+            url: "https://www.sporsitesi.example/fb-gs",
+            source: "Spor Sitesi",
+          },
+        ],
       },
       {
         providerId: trends!.id,
@@ -176,6 +184,13 @@ describe.skipIf(!URL_)("YouTube entegrasyonu", () => {
         geo: "TR",
         approxTraffic: 20000,
         observedAt: now,
+        related: [
+          {
+            title: "Adana'da deprem korkuttu",
+            url: "https://www.haber.example/adana-deprem",
+            source: "Haber",
+          },
+        ],
       },
     ]);
     await buildTopics({ db, client, log: silent, now: () => now });

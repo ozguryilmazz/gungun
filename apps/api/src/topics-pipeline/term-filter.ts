@@ -1,8 +1,8 @@
 // Google trend aramalarından GÜNDEM BAŞLIĞI OLAMAYACAKLARI ayıran kural tabanlı filtre (yapay zekâ yok).
 //
-//  - exclude:    hiç konu olmaz (siteye gitmek için arama, canlı yayın, hava durumu, yasa dışı, yabancı dil…)
-//  - needs_news: yalnızca aramayı AÇIKLAYAN bir haber varsa konu olur (tek kelimelik genel aramalar)
-//  - keep:       normal trend konusu
+//  - exclude: hiç konu olmaz (siteye gitmek için arama, canlı yayın, hava durumu, yasa dışı, yabancı dil…)
+//  - keep:    aday; ama yalnızca aramayı AÇIKLAYAN bir haber varsa listelenir (kelime sayısı fark etmez,
+//             bu kontrol pipeline'da yapılır: "no_news")
 //
 // Elenen aramalar silinmez: trend_signals'ta kalır; `pnpm trends:filter` ile neden elendiği görülür.
 // Liste ileride admin panelinden düzenlenebilir hâle gelecek (aşama 10).
@@ -15,10 +15,10 @@ export type FilterReason =
   | "illegal"
   | "foreign_language"
   | "date_or_weekday"
-  | "single_word";
+  | "no_news";
 
 export interface TermVerdict {
-  verdict: "keep" | "exclude" | "needs_news";
+  verdict: "keep" | "exclude";
   reason: FilterReason | null;
 }
 
@@ -29,7 +29,7 @@ export const FILTER_REASON_LABELS: Record<FilterReason, string> = {
   illegal: "Yasa dışı bahis veya korsan yayın",
   foreign_language: "Yabancı dilde arama",
   date_or_weekday: "Tarih veya gün adı",
-  single_word: "Tek kelimelik genel arama (yalnızca haberle açıklanırsa gösterilir)",
+  no_news: "Aramayı açıklayan haber bulunamadı (haber bulununca listelenir)",
 };
 
 const normalize = (term: string) => term.toLocaleLowerCase("tr-TR").trim().replace(/\s+/g, " ");
@@ -270,7 +270,5 @@ export function classifyTerm(term: string): TermVerdict {
     return { verdict: "exclude", reason: "site_or_brand" };
   if (DATE_PATTERNS.some((p) => p.test(t)))
     return { verdict: "exclude", reason: "date_or_weekday" };
-  // Tek kelime ("zeytin", "kredi", "istanbul", "osimhen"): ancak bir haber açıklıyorsa
-  if (!t.includes(" ")) return { verdict: "needs_news", reason: "single_word" };
   return { verdict: "keep", reason: null };
 }

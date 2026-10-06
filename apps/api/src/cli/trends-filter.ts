@@ -25,10 +25,8 @@ try {
       const v = classifyTerm(r.term);
       const label =
         v.verdict === "keep"
-          ? "✔ Gündem konusu olur"
-          : v.verdict === "needs_news"
-            ? `? ${FILTER_REASON_LABELS[v.reason!]}`
-            : `✖ ${FILTER_REASON_LABELS[v.reason!]}`;
+          ? "✔ Aday: açıklayan haber bulunursa listelenir"
+          : `✖ ${FILTER_REASON_LABELS[v.reason!]}`;
       groups.set(label, [...(groups.get(label) ?? []), r.term]);
     }
     const when = new Date(rows[0]!.observed_at).toLocaleString("tr-TR", {

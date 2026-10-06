@@ -650,6 +650,8 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
       snapshotId: number;
       topicId: string;
       score: number | null;
+      /** Aramayı açıklayan en az bir haberi var mı (sitedeki sıralama ile aynı kural) */
+      explained: boolean;
     }[] = [];
     const claimedClusters = new Set<Cluster>();
 
@@ -716,13 +718,39 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
         .slice(0, 15);
       const cluster = bestClusterForTrend(clusters, trend);
       const newsItems = cluster?.items ?? [];
-      // Tek kelimelik genel arama ("zeytin", "kredi") yalnızca bir haber açıklıyorsa konu olur
-      if (
-        verdict.verdict === "needs_news" &&
-        newsItems.length === 0 &&
-        trend.related.length === 0
-      ) {
-        await hideFiltered(existing, FILTER_REASON_LABELS.single_word);
+      // Aramayı açıklayan haber yoksa (bu çalıştırmada ya da daha önce bağlanmış) listelenmez;
+      // haber bulununca konu açılır / yeniden görünür
+      // Önce eski kurallarla bağlanmış uymayan "ilgili haberler" çıkarılır (başlığında terim geçmeyen
+      // veya Türkçe olmayan), sonra konunun açıklaması olup olmadığına bakılır
+      if (existing && trendsProvider) {
+        const linkedRelated = await db
+          .select({ id: sourceItems.id, title: sourceItems.title })
+          .from(topicItems)
+          .innerJoin(sourceItems, eq(sourceItems.id, topicItems.sourceItemId))
+          .where(
+            and(eq(topicItems.topicId, existing.id), eq(sourceItems.providerId, trendsProvider.id)),
+          );
+        const stale = linkedRelated
+          .filter((r) => !headlineExplainsTerm(r.title, trend.term))
+          .map((r) => r.id);
+        if (stale.length) {
+          await db
+            .delete(topicItems)
+            .where(
+              and(eq(topicItems.topicId, existing.id), inArray(topicItems.sourceItemId, stale)),
+            );
+        }
+      }
+      let hasNews = newsItems.length > 0 || trend.related.length > 0;
+      if (!hasNews && existing) {
+        const [linked] = await db
+          .select({ n: sql<number>`count(*)::int` })
+          .from(topicItems)
+          .where(eq(topicItems.topicId, existing.id));
+        hasNews = (linked?.n ?? 0) > 0;
+      }
+      if (!hasNews) {
+        await hideFiltered(existing, FILTER_REASON_LABELS.no_news);
         continue;
       }
       if (cluster) claimedClusters.add(cluster);
@@ -809,24 +837,6 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
               .onConflictDoNothing();
           }
         }
-        // Filtreden önce bağlanmış alakasız "ilgili haberler" (başlığında terim geçmeyen) çıkarılır
-        if (existing && trendsProvider) {
-          const linkedRelated = await tx
-            .select({ id: sourceItems.id, title: sourceItems.title })
-            .from(topicItems)
-            .innerJoin(sourceItems, eq(sourceItems.id, topicItems.sourceItemId))
-            .where(
-              and(eq(topicItems.topicId, topicId), eq(sourceItems.providerId, trendsProvider.id)),
-            );
-          const stale = linkedRelated
-            .filter((r) => !headlineExplainsTerm(r.title, trend.term))
-            .map((r) => r.id);
-          if (stale.length) {
-            await tx
-              .delete(topicItems)
-              .where(and(eq(topicItems.topicId, topicId), inArray(topicItems.sourceItemId, stale)));
-          }
-        }
         if (current === "hidden") return;
 
         const status = nextTrendStatus(current, trend, now);
@@ -889,7 +899,17 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
         );
         if (snap) {
           result.snapshots++;
-          visible.push({ kind: "trend", snapshotId: snap.id, topicId, score: snap.score });
+          const [linked] = await tx
+            .select({ n: sql<number>`count(*)::int` })
+            .from(topicItems)
+            .where(eq(topicItems.topicId, topicId));
+          visible.push({
+            kind: "trend",
+            snapshotId: snap.id,
+            topicId,
+            score: snap.score,
+            explained: (linked?.n ?? 0) > 0,
+          });
         }
         if (status === "published") result.published++;
         if (status === "cooling") result.cooling++;
@@ -1019,7 +1039,13 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
         );
         if (snap) {
           result.snapshots++;
-          visible.push({ kind: "news", snapshotId: snap.id, topicId, score: snap.score });
+          visible.push({
+            kind: "news",
+            snapshotId: snap.id,
+            topicId,
+            score: snap.score,
+            explained: true,
+          });
         }
         if (status === "published") result.published++;
         if (status === "cooling") result.cooling++;
@@ -1044,7 +1070,10 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
     for (const kind of ["trend", "news"] as const) {
       const ranked = visible
         .filter((s) => s.kind === kind && s.score !== null)
-        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+        // Sitedeki sıralamayla aynı: önce haberle açıklananlar, sonra skora göre
+        .sort(
+          (a, b) => Number(b.explained) - Number(a.explained) || (b.score ?? 0) - (a.score ?? 0),
+        );
       for (const [i, s] of ranked.entries()) {
         const rank = i + 1;
         await db.update(topicSnapshots).set({ rank }).where(eq(topicSnapshots.id, s.snapshotId));

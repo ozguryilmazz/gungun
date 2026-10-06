@@ -179,3 +179,10 @@ Kural tabanlı (`apps/api/src/topics-pipeline/term-filter.ts`), yapay zekâ yok:
 - Aramayı yalnızca **Türkçe** başlık açıklayabilir (kural tabanlı: Türkçe harf yoksa ve en az 2 yabancı bağlaç/edat varsa başlık yabancı sayılır). Google’ın ilgili haberleri yabancı sitelerden de gelebildiği için gerekli.
 - Takvim soruları (“6 ekim ne günü”, “hangi güne denk geliyor”) tarih araması olarak elenir.
 - Daha önce bağlanmış uymayan ilgili haberler her güncellemede konudan çıkarılır.
+
+### Açıklaması olmayan aramalar listelenmez (karar güncellendi)
+
+- Önceki karar (“aşağı it”) yerine: aramayı açıklayan **en az bir Türkçe haber** yoksa trend konusu **listelenmez**; kelime sayısı fark etmez.
+- Açıklama kaynakları: eşleşen RSS haber kümesi, Google’ın ilgili haberleri (filtrelenmiş) ve haber araması (GDELT). Daha önce bağlanmış uymayan haberler kontrol öncesinde temizlenir.
+- Açıklaması olmayan konu “Filtre: Aramayı açıklayan haber bulunamadı” işaretiyle gizlenir; haber bulununca kendiliğinden yeniden görünür.
+- “İlk 5’e girdi” olayı da sitedeki sıralamayla aynı kuralla hesaplanır.

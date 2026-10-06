@@ -176,7 +176,8 @@ describe.skipIf(!URL_)("GDELT entegrasyonu", () => {
       logLevel: "silent",
     });
     const list = TopicListResponseSchema.parse((await app.inject("/api/v1/topics")).json());
-    expect(list.items.map((t) => t.title)).toEqual(["Togg", "Adana Deprem"]);
+    // Haberi bulunamayan aramalar ("deprem", "adana deprem") listelenmez
+    expect(list.items.map((t) => t.title)).toEqual(["Togg"]);
     expect(list.items[0]?.headline?.source).toMatch(/Hürriyet|NTV/);
     await app.close();
   });

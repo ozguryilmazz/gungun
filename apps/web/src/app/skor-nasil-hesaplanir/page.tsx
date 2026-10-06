@@ -63,9 +63,10 @@ export default function ScoreExplainerPage() {
       <section className={styles.section}>
         <h2 className={styles.h2}>Sıralama</h2>
         <p>
-          Liste önce aramanın nedenini açıklayan en az bir haberi olan konuları, sonra açıklayan
-          haberi bulunamayan aramaları gösterir; her grup kendi içinde skora göre sıralanır. Skor
-          değişmez: açıklaması olmayan bir arama yüksek skorlu olabilir ama daha aşağıda yer alır.
+          Listede yalnızca nedenini açıklayan en az bir haber bulunan aramalar yer alır ve bunlar
+          skora göre sıralanır. Çok aranan ama henüz hiçbir haberle açıklanamayan aramalar (örneğin
+          bir siteye ulaşmak için yapılanlar) gösterilmez; açıklayan bir haber çıkınca listeye
+          girer.
         </p>
       </section>
 

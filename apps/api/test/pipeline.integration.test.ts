@@ -153,7 +153,7 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
         ],
       },
       { term: "merkez bankası", traffic: 20000 },
-      { term: "uzay istasyonu", traffic: 5000 },
+      { term: "uzay istasyonu", traffic: 5000 }, // haberi yok → listelenmez
       { term: "zeytin", traffic: 4000 }, // tek kelime, haberi yok → konu olmaz
       { term: "trendyol", traffic: 30000 }, // siteye gitmek için arama → elenir
       { term: "sözcü", traffic: 10000 }, // medya adı → konu olmaz
@@ -164,16 +164,12 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
     await close?.();
   });
 
-  it("trend aramaları konu olur; haberler konuyu açıklar; site adı ve açıklanamayan tek kelime elenir", async () => {
+  it("trend aramaları konu olur; haberler konuyu açıklar; site adı ve açıklanamayan arama listelenmez", async () => {
     const r = await build(T0);
-    expect(r.trends).toBe(3);
-    expect(r.filtered).toBe(3); // sözcü, zeytin, trendyol
+    expect(r.trends).toBe(2);
+    expect(r.filtered).toBe(4); // sözcü, trendyol (site adı); zeytin, uzay istasyonu (haber yok)
     const trendTopics = (await real("trend")).filter((t) => t.status !== "hidden");
-    expect(trendTopics.map((t) => t.title).sort()).toEqual([
-      "Derbi",
-      "Merkez Bankası",
-      "Uzay İstasyonu",
-    ]);
+    expect(trendTopics.map((t) => t.title).sort()).toEqual(["Derbi", "Merkez Bankası"]);
     expect(trendTopics.every((t) => t.status === "published")).toBe(true);
     const [trendyol] = await db.select().from(topics).where(eq(topics.trendKey, "trendyol"));
     expect(trendyol?.status).toBe("hidden");
@@ -196,11 +192,10 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
     ).map((e) => e.type);
     expect(events).toEqual(expect.arrayContaining(["trend_listed", "entered_top5"]));
 
-    // Haberi olmayan çok kelimeli arama da konu olur (yalnızca arama sinyaliyle)
-    const uzay = trendTopics.find((t) => t.title === "Uzay İstasyonu")!;
-    expect(await db.select().from(topicItems).where(eq(topicItems.topicId, uzay.id))).toHaveLength(
-      0,
-    );
+    // Haberi olmayan arama (kelime sayısı fark etmez) konu olarak açılmaz
+    expect(
+      await db.select().from(topics).where(eq(topics.trendKey, "uzay istasyonu")),
+    ).toHaveLength(0);
 
     const [snap] = await db
       .select()
@@ -210,8 +205,27 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
     expect(snap?.components.social?.available).toBe(false);
   });
 
-  it("eskiden bağlanmış alakasız ilgili haber konudan çıkarılır; açıklaması olmayan arama sonra sıralanır", async () => {
-    const uzay = (await real("trend")).find((t) => t.title === "Uzay İstasyonu")!;
+  it("yalnızca alakasız eski haberi olan konu: haber çıkarılır ve konu listeden kalkar; haber gelince geri döner", async () => {
+    // Filtreden önceki kurallarla açılmış ve alakasız bir haber bağlanmış konu
+    const [diger] = await db.execute<{ id: number }>(
+      sql`select id from categories where slug = 'diger'`,
+    );
+    const [uzay] = await db
+      .insert(topics)
+      .values({
+        slug: "uzay-istasyonu",
+        title: "Uzay İstasyonu",
+        kind: "trend",
+        trendKey: "uzay istasyonu",
+        categoryId: Number(diger!.id),
+        status: "published",
+        publishedAt: at(-30),
+        reasons: [],
+        summaryOrigin: "none",
+        isMock: false,
+        firstSeenAt: at(-30),
+      })
+      .returning({ id: topics.id });
     const url = "https://www.baskasite.example/alakasiz";
     const [stale] = await db
       .insert(sourceItems)
@@ -225,11 +239,15 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
         fetchedAt: at(-5),
       })
       .returning({ id: sourceItems.id });
-    await db.insert(topicItems).values({ topicId: uzay.id, sourceItemId: stale!.id });
+    await db.insert(topicItems).values({ topicId: uzay!.id, sourceItemId: stale!.id });
+
     await build(at(1));
-    expect(await db.select().from(topicItems).where(eq(topicItems.topicId, uzay.id))).toHaveLength(
+    expect(await db.select().from(topicItems).where(eq(topicItems.topicId, uzay!.id))).toHaveLength(
       0,
     );
+    const [hidden] = await db.select().from(topics).where(eq(topics.id, uzay!.id));
+    expect(hidden?.status).toBe("hidden");
+    expect(hidden?.reasons[0]).toMatch(/^Filtre: Aramayı açıklayan haber bulunamadı/);
 
     const app = await buildApp({
       repo: createTopicRepository(db),
@@ -238,9 +256,15 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
       logLevel: "silent",
     });
     const list = TopicListResponseSchema.parse((await app.inject("/api/v1/topics")).json());
-    expect(list.items.at(-1)?.title).toBe("Uzay İstasyonu");
-    expect(list.items.at(-1)?.sourceCount).toBe(0);
+    expect(list.items.map((t) => t.title)).not.toContain("Uzay İstasyonu");
+    expect(list.items.every((t) => t.sourceCount > 0)).toBe(true);
     await app.close();
+
+    // Açıklayan haber gelince konu yeniden görünür
+    await addItem(0, "Uluslararası Uzay İstasyonu'na yeni ekip ulaştı", 2, "bilim");
+    await build(at(3));
+    const [back] = await db.select().from(topics).where(eq(topics.id, uzay!.id));
+    expect(back?.status).toBe("published");
   });
 
   it("aramada olmayan ama çok kaynaklı olay 'haber' konusu olur", async () => {
@@ -289,7 +313,7 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
   it("listeden çıkan arama soğur, sonra arşive düşer; arşivden açılır", async () => {
     await trendBatch(60, [{ term: "derbi", traffic: 100000 }]);
     const r = await build(at(65));
-    expect(r.cooling).toBeGreaterThanOrEqual(2);
+    expect(r.cooling).toBeGreaterThanOrEqual(1);
     const merkez = (await real("trend")).find((t) => t.title === "Merkez Bankası")!;
     expect(merkez.status).toBe("cooling");
     expect(merkez.reasons[0]).toBe("Google’ın Türkiye trend listesinden çıktı");
