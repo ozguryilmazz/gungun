@@ -1,10 +1,9 @@
 import type { StatusResponse, TopicListResponse, YoutubeListResponse } from "@gundemci/shared";
 import { CHANGE_WINDOW_HOURS } from "@gundemci/shared";
 import Link from "next/link";
-import { formatDate, formatRelative } from "@/lib/format";
-import { listSignature } from "@/lib/refresh";
-import { AutoRefresh } from "./AutoRefresh";
+import { formatClock, formatDate, formatRelative } from "@/lib/format";
 import { CategoryNav } from "./CategoryNav";
+import { ListRefresh } from "./ListRefresh";
 import { MockBanner } from "./MockBanner";
 import { MovementList } from "./MovementList";
 import { NewsHighlights } from "./NewsHighlights";
@@ -47,20 +46,16 @@ export function TopicFeed({
   return (
     <>
       <MockBanner show={isMock} />
-      <AutoRefresh
-        slugs={list.items.map((t) => t.slug)}
-        signature={listSignature(list.items)}
-        category={activeCategory}
-      />
       <div className={`container ${styles.layout}`}>
         <main id="icerik" className={styles.main}>
           <div className={styles.intro}>
             <h1 className={styles.heading}>{heading}</h1>
             <p className={styles.sub}>
               {formatDate(now)}
-              {latest ? ` · Son güncelleme: ${formatRelative(latest, now)}` : ""} ·{" "}
+              {latest ? ` · Veriler ${formatRelative(latest, now)} güncellendi` : ""} ·{" "}
               {list.items.length} konu
             </p>
+            <ListRefresh refreshedAt={formatClock(list.meta.generatedAt)} />
             <p className={styles.note}>
               Liste, Türkiye’de Google’da trend olan aramalardan oluşur; haberler aramanın nedenini
               açıklar. Gündem skoru ne kadar arandığını ölçer, önemini değil.{" "}

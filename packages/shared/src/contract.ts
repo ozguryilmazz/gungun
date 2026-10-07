@@ -56,6 +56,13 @@ export const TopicSummarySchema = z.object({
       sinceHours: z.number().int().min(0),
     })
     .nullable(),
+  /**
+   * ~1 saat öncesine göre sıra değişimi. up/down: kaç sıra; new: son 24 saatte listede yoktu;
+   * same: değişmedi. null: sırası yok ya da karşılaştırılacak yakın ölçüm yok.
+   */
+  movement: z
+    .object({ kind: z.enum(["up", "down", "same", "new"]), by: z.number().int().min(0) })
+    .nullable(),
   /** Son 24 saatin saatlik skorları (eskiden yeniye; her saatin son ölçümü) — mini grafik için */
   sparkline: z.array(score).max(25),
   summary: z.string().max(1200).nullable(),

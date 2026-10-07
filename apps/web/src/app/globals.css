@@ -15,6 +15,9 @@
   --accent-soft: #e5f0f4;
   --down: #a3461a;
   --down-soft: #fbede5;
+  /* Sıra değişimi okları: yükselen yeşil, düşen kırmızı */
+  --rank-up: #177245;
+  --rank-down: #b42318;
   --flat-soft: #edeff2;
   --mock-bg: #fff3dc;
   --mock-border: #eed7a6;

@@ -53,10 +53,23 @@ function toSummary(row: TopicRow, rank: number | null): TopicSummary {
     sourceCount: row.sourceCount,
     searchVolume: row.searchVolume,
     sparkline: row.sparkline,
+    movement: movement(rank, row.previousRank),
     summary: row.summary,
     updatedAt: (row.latest?.capturedAt ?? row.topicUpdatedAt).toISOString(),
     isMock: row.isMock,
   };
+}
+
+/** ~1 saat önceki sıraya göre değişim (bkz. TopicRow.previousRank) */
+export function movement(
+  rank: number | null,
+  previous: TopicRow["previousRank"],
+): TopicSummary["movement"] {
+  if (rank === null || previous === null) return null;
+  if (previous === "none") return { kind: "new", by: 0 };
+  if (previous > rank) return { kind: "up", by: previous - rank };
+  if (previous < rank) return { kind: "down", by: rank - previous };
+  return { kind: "same", by: 0 };
 }
 
 /** Trend konusu, aramayı açıklayan en az bir habere sahip mi? (haber konuları her zaman öyle) */

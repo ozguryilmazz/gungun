@@ -25,6 +25,7 @@ const summary = {
   sourceCount: 4,
   searchVolume: { approxTraffic: 50000, sinceHours: 3 },
   sparkline: [55, 70, 92],
+  movement: { kind: "up", by: 2 },
   summary: "Bu bir örnek konudur.",
   updatedAt: NOW,
   isMock: true,

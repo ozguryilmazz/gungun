@@ -28,6 +28,7 @@ export function topicRow(overrides: Partial<TopicRow> & { slug: string }): Topic
     sourceCount: 3,
     searchVolume: null,
     sparkline: [40, 45, 50],
+    previousRank: null,
     ...overrides,
   };
 }

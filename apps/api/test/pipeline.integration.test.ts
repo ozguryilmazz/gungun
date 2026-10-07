@@ -293,6 +293,8 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
     const trends = TopicListResponseSchema.parse((await app.inject("/api/v1/topics")).json());
     expect(trends.items.every((t) => t.kind === "trend")).toBe(true);
     expect(trends.items[0]?.title).toBe("Derbi"); // en yüksek arama hacmi
+    // İlk ölçüm: son 24 saatte listede yoktu → yeni giriş
+    expect(trends.items[0]?.movement).toEqual({ kind: "new", by: 0 });
     // Google'ın yaklaşık arama sayısı; liste 5 dk önce, konu da o an açıldı → 0 saat
     expect(trends.items[0]?.searchVolume).toEqual({ approxTraffic: 50000, sinceHours: 0 });
     // Mini grafik: şimdiye kadar saat başına son skor (iki çalıştırma aynı saatte → tek nokta)
@@ -314,6 +316,17 @@ describe.skipIf(!URL_)("arama öncelikli gündem üretimi", () => {
     await trendBatch(60, [{ term: "derbi", traffic: 100000 }]);
     const r = await build(at(65));
     expect(r.cooling).toBeGreaterThanOrEqual(1);
+
+    // Sıra değişimi: Derbi 65 dk önce de 1. sıradaydı
+    const app0 = await buildApp({
+      repo: createTopicRepository(db),
+      cacheTtlSeconds: 0,
+      rateLimitMax: 1000,
+      logLevel: "silent",
+    });
+    const now1 = TopicListResponseSchema.parse((await app0.inject("/api/v1/topics")).json());
+    expect(now1.items.find((t) => t.title === "Derbi")?.movement).toEqual({ kind: "same", by: 0 });
+    await app0.close();
     const merkez = (await real("trend")).find((t) => t.title === "Merkez Bankası")!;
     expect(merkez.status).toBe("cooling");
     expect(merkez.reasons[0]).toBe("Google’ın Türkiye trend listesinden çıktı");

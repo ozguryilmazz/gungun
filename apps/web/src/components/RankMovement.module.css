@@ -1,0 +1,27 @@
+.move {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.up,
+.new {
+  color: var(--rank-up);
+}
+
+.down {
+  color: var(--rank-down);
+}
+
+.same {
+  color: var(--muted);
+}
+
+.new {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}

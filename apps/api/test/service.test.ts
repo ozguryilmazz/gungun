@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  movement,
   providerState,
   rankTopics,
   selectFalling,
@@ -72,5 +73,17 @@ describe("providerState", () => {
       providerState({ ...base, lastSuccessAt: new Date(NOW.getTime() - 3_600_000) }, NOW),
     ).toBe("stale");
     expect(providerState({ ...base, consecutiveFailures: 2, lastErrorAt: NOW }, NOW)).toBe("error");
+  });
+});
+
+describe("sıra değişimi", () => {
+  it("1 saat önceki sıraya göre yükseliş, düşüş, aynı, yeni giriş", () => {
+    expect(movement(2, 5)).toEqual({ kind: "up", by: 3 });
+    expect(movement(4, 1)).toEqual({ kind: "down", by: 3 });
+    expect(movement(3, 3)).toEqual({ kind: "same", by: 0 });
+    expect(movement(6, "none")).toEqual({ kind: "new", by: 0 });
+    // Sırası yok ya da karşılaştırılacak yakın ölçüm yok → gösterilmez
+    expect(movement(null, 2)).toBeNull();
+    expect(movement(2, null)).toBeNull();
   });
 });

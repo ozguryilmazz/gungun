@@ -186,3 +186,8 @@ Kural tabanlı (`apps/api/src/topics-pipeline/term-filter.ts`), yapay zekâ yok:
 - Açıklama kaynakları: eşleşen RSS haber kümesi, Google’ın ilgili haberleri (filtrelenmiş) ve haber araması (GDELT). Daha önce bağlanmış uymayan haberler kontrol öncesinde temizlenir.
 - Açıklaması olmayan konu “Filtre: Aramayı açıklayan haber bulunamadı” işaretiyle gizlenir; haber bulununca kendiliğinden yeniden görünür.
 - “İlk 5’e girdi” olayı da sitedeki sıralamayla aynı kuralla hesaplanır.
+
+### Liste yenileme ve sıra okları (güncellendi)
+
+- **Yenileme:** Alttaki “yeni konu” şeridi kaldırıldı. Liste **15 dakikada bir** kendiliğinden yenilenir (sekme arka plandayken beklenir, dönünce süre dolmuşsa hemen yenilenir). Başlığın altında **“Listeyi yenile”** düğmesi ve sayfanın son yenilenme saati var.
+- **Sıra okları:** Her kartta sıra numarasının altında **~1 saat öncesine göre** değişim: yeşil ▲N yükseldi, kırmızı ▼N düştü, yeşil “▲ YENİ” son 24 saatte listede yoktu, “–” değişmedi. Karşılaştırma ölçümü 2 saatten eskiyse (ör. sistem kapalıydı) ok gösterilmez (`TopicSummary.movement`).

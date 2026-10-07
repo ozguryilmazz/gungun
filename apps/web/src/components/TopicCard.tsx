@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { TopicSummary } from "@gundemci/shared";
 import { formatRelative, formatSearchVolume } from "@/lib/format";
+import { RankMovement } from "./RankMovement";
 import { ScoreBar } from "./ScoreBar";
 import { Sparkline } from "./Sparkline";
 import { TrendBadge } from "./TrendBadge";
@@ -12,6 +13,7 @@ export function TopicCard({ topic, now }: { topic: TopicSummary; now: Date }) {
       <span className={`${styles.rank} mono`}>
         <span className="visually-hidden">Sıra </span>
         {topic.rank ?? "–"}
+        <RankMovement movement={topic.movement} />
       </span>
       <span className={styles.category}>{topic.category.name}</span>
       <span className={styles.score}>

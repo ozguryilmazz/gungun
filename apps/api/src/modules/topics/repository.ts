@@ -29,6 +29,11 @@ export interface TopicRow {
   searchVolume: { approxTraffic: number; sinceHours: number } | null;
   /** Son 24 saatin saatlik skorları (eskiden yeniye) */
   sparkline: number[];
+  /**
+   * Karşılaştırma sırası: ~1 saat önceki listede kaçıncıydı. "none": son 24 saatte listede hiç
+   * yoktu (yeni giriş); null: karşılaştırılacak yakın ölçüm yok.
+   */
+  previousRank: number | "none" | null;
 }
 
 export interface TopicDetailRow extends TopicRow {
@@ -114,6 +119,8 @@ type RawTopic = {
   signals_total: number | null;
   latest_components: ScoreComponents | null;
   sparkline: (number | string)[] | null;
+  pr_rank: number | null;
+  pr_at: Date | string | null;
   prev_at: Date | null;
   prev_score: number | null;
   source_count: number;
@@ -164,11 +171,20 @@ function mapTopic(r: RawTopic): TopicRow {
     previous: r.prev_at === null ? null : { capturedAt: asDate(r.prev_at), score: r.prev_score },
     sourceCount: Number(r.source_count),
     searchVolume: searchVolume(r),
+    previousRank: previousRank(r),
     sparkline: (r.sparkline ?? [])
       .map(Number)
       .filter((n) => Number.isInteger(n) && n >= 0 && n <= 100)
       .slice(-25),
   };
+}
+
+/** Karşılaştırma ölçümü 2 saatten eskiyse (ör. sistem bir süre kapalıydı) değişim gösterilmez */
+function previousRank(r: RawTopic): TopicRow["previousRank"] {
+  if (r.latest_at === null) return null;
+  if (r.pr_at === null || r.pr_rank === null) return "none";
+  const gapMin = (asDate(r.latest_at).getTime() - asDate(r.pr_at).getTime()) / 60_000;
+  return gapMin <= 120 ? Number(r.pr_rank) : null;
 }
 
 /** Son skor kaydındaki arama ilgisi: ham değer Google'ın yaklaşık arama sayısıdır */
@@ -194,7 +210,7 @@ function topicSelect(windowMinutes: number) {
            l.signals_available, l.signals_total, l.components as latest_components,
            p.captured_at as prev_at, p.score as prev_score,
            (select count(*)::int from topic_items ti where ti.topic_id = t.id) as source_count,
-           sp.sparkline
+           sp.sparkline, pr.rank as pr_rank, pr.captured_at as pr_at
     from topics t
     join categories c on c.id = t.category_id
     left join lateral (
@@ -212,6 +228,17 @@ function topicSelect(windowMinutes: number) {
       order by s.captured_at desc
       limit 1
     ) p on true
+    left join lateral (
+      -- Sıra değişimi: ~1 saat (en az 50 dk) önceki, listede sıra almış son ölçüm (son 24 saat)
+      select s.rank, s.captured_at
+      from topic_snapshots s
+      where s.topic_id = t.id
+        and s.rank is not null
+        and s.captured_at <= l.captured_at - interval '50 minutes'
+        and s.captured_at >= l.captured_at - interval '24 hours'
+      order by s.captured_at desc
+      limit 1
+    ) pr on true
     left join lateral (
       -- Mini grafik: son 24 saatte her saatin son skoru
       select json_agg(x.score order by x.hour) as sparkline
