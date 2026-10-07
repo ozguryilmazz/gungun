@@ -4,7 +4,8 @@ import "server-only";
 import type { z } from "zod";
 
 const DEFAULT_API_URL = "http://127.0.0.1:4000";
-const TIMEOUT_MS = 5_000;
+// Geliştirmede sayfalar ilk açılışta derlenirken sunucu birkaç saniye meşgul kalabilir
+const TIMEOUT_MS = process.env.NODE_ENV === "production" ? 5_000 : 10_000;
 const REVALIDATE_SECONDS = 30;
 
 /** Veri alınamadı (ağ, zaman aşımı, 5xx, sözleşmeye uymayan yanıt). Ayrıntı yalnızca logda. */
@@ -75,7 +76,9 @@ async function fetchJson(url: URL, mode: "cached" | "no-store"): Promise<unknown
         : { cache: "no-store" as const }),
     });
   } catch (error) {
-    console.error(`[api] ${url.pathname} isteği başarısız`, error);
+    // Zaman aşımı / bağlantı hatası geçicidir ve sayfayı bozmaz (bölüm "güncellenemiyor" gösterir)
+    const reason = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    console.warn(`[api] ${url.pathname} isteği başarısız (${reason})`);
     throw new DataUnavailableError("API'ye ulaşılamadı", { cause: error });
   }
 
