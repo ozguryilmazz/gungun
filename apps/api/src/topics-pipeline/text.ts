@@ -502,15 +502,120 @@ const FOREIGN_STOPWORDS = new Set([
   "est",
 ]);
 
+/** Türkçede sık geçen ve Türkçe harf içermeyen kelimeler (olumlu Türkçe işareti) */
+const TURKISH_WORDS = new Set([
+  "ve",
+  "ile",
+  "bir",
+  "bu",
+  "mu",
+  "yeni",
+  "oldu",
+  "olarak",
+  "etti",
+  "gibi",
+  "kadar",
+  "sonra",
+  "var",
+  "yok",
+  "belli",
+  "resmen",
+  "duyurdu",
+  "geldi",
+  "verdi",
+  "dedi",
+  "haber",
+  "haberi",
+  "haberleri",
+  "dakika",
+  "ilk",
+  "tam",
+  "daha",
+  "artik",
+  "iki",
+  "yeniden",
+  "nedir",
+  "nerede",
+  "neden",
+  "kimdir",
+  "hangi",
+  "oldu",
+  "olacak",
+  "zam",
+  "zammi",
+  "maci",
+  "canli",
+  "bugun",
+  "yarin",
+  "dun",
+  "bakan",
+  "bakani",
+  "baskan",
+  "genel",
+  "milli",
+  "takim",
+  "kadin",
+  "erkek",
+  "yasindaki",
+  "yasinda",
+  "ilgili",
+  "karar",
+  "ekim",
+  "kasim",
+  "aralik",
+  "ocak",
+  "mart",
+  "nisan",
+  "mayis",
+  "haziran",
+  "temmuz",
+  "eylul",
+  "subat",
+  "agustos",
+]);
+
+/** Türkçe ekler (İngilizcede neredeyse hiç görülmeyen biçimler) */
+const TURKISH_SUFFIX = /(iyor|uyor|ecek|acak|ndan|nden|lari|leri|sini|lerin|larin|dir)$/;
+
 /**
- * Başlık Türkçe mi? (Kural tabanlı, yapay zekâ yok.) Türkçe harf (ç ğ ı ö ş ü İ) varsa Türkçe sayılır;
- * yoksa en az 2 yabancı bağlaç/edat içeren başlık yabancı dilde sayılır.
+ * Tek başına bile yabancı dili gösteren kelimeler (Almanca ü/ö de içerebildiği için gerekli).
+ * Türkçede de kullanılanlar bilerek yok: "para", "el", "del" (ad), "the" ("The Voice" gibi programlar).
+ */
+const STRONG_FOREIGN_WORDS = new Set([
+  "für",
+  "über",
+  "und",
+  "nicht",
+  "ist",
+  "das",
+  "auch",
+  "los",
+  "las",
+  "una",
+  "por",
+  "these",
+  "their",
+]);
+
+/** Türkçede olmayan harfler: bu harflerden biri varsa başlık Türkçe değildir */
+const NON_TURKISH_LETTERS = /[äßñáéíóúàèìòùâêôõãåæøœ]/i;
+
+/**
+ * Başlık Türkçe mi? (Kural tabanlı, yapay zekâ yok.)
+ * Türkçe sayılması için OLUMLU bir işaret gerekir: Türkçe harf (ç ğ ı ö ş ü İ), Türkçe sık kelime
+ * ya da Türkçe ek. Türkçede olmayan harf (ñ, ä, ß, é…) veya en az 2 yabancı bağlaç varsa yabancıdır.
  */
 export function looksTurkish(title: string): boolean {
-  if (/[çğıöşüÇĞİÖŞÜ]/.test(title)) return true;
-  const ws = title
+  if (NON_TURKISH_LETTERS.test(title)) return false;
+  const latin = title
     .toLowerCase()
-    .split(/[^a-zäß0-9]+/)
+    .split(/[^a-z0-9çğıöşü]+/)
     .filter(Boolean);
-  return ws.filter((w) => FOREIGN_STOPWORDS.has(w)).length < 2;
+  if (latin.filter((w) => FOREIGN_STOPWORDS.has(w)).length >= 2) return false;
+  if (latin.some((w) => STRONG_FOREIGN_WORDS.has(w))) return false;
+  if (/[çğıöşüÇĞİÖŞÜ]/.test(title)) return true;
+  // Kesme işaretinden sonraki ek ("Galatasaray'a", "Togg'dan") Türkçedir; İngilizce 's, 't… hariç
+  const apostrophe = title.toLowerCase().match(/['’]([a-zçğıöşü]{1,5})(?![a-zçğıöşü])/g) ?? [];
+  if (apostrophe.some((m) => !/^['’](s|t|re|ve|ll|d|m)$/.test(m))) return true;
+  return latin.some((w) => TURKISH_WORDS.has(w) || (w.length > 4 && TURKISH_SUFFIX.test(w)));
 }

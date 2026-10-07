@@ -226,5 +226,19 @@ describe("başlık aramayı açıklıyor mu (dil ve tam eşleşme)", () => {
     expect(looksTurkish("Leandro Trossard Galatasaray'a mı geliyor?")).toBe(true);
     expect(looksTurkish("Arsenal Trossard transferini resmen duyurdu")).toBe(true);
     expect(looksTurkish("Trossard bei Bayern: Der Transfer ist fix und offiziell")).toBe(false);
+    // Gerçek listeden: tek yabancı bağlaçlı veya İspanyolca başlıklar
+    expect(
+      looksTurkish("Samsung One UI 9 Rollout: These Galaxy Phones Are Getting Android 17"),
+    ).toBe(false);
+    expect(looksTurkish("MN law enforcement leaders on Somali gang concerns")).toBe(false);
+    expect(looksTurkish("Pedro anuncia su retirada a los 39 años")).toBe(false);
+    expect(looksTurkish("Samsung's new phone is here")).toBe(false);
+    expect(looksTurkish("Honda Civic Type R review")).toBe(false);
+    expect(looksTurkish("Für Bayern: Transfer offiziell")).toBe(false);
+    // Türkçe harf içermeyen Türkçe başlıklar
+    expect(looksTurkish("Samsung yeni telefonunu tanitti")).toBe(true);
+    expect(looksTurkish("Togg'dan ekim kampanyasi")).toBe(true);
+    expect(looksTurkish("Somali ile anlasma imzalandi")).toBe(true);
+    expect(looksTurkish("Emekli zammi belli oldu")).toBe(true);
   });
 });

@@ -176,7 +176,7 @@ Kural tabanlı (`apps/api/src/topics-pipeline/term-filter.ts`), yapay zekâ yok:
 ### Başlık eşleşmesi sıkılaştırıldı
 
 - Çok kelimeli aramada terimin **her kelimesi** başlıkta geçmeli; sayılar birebir (“6 ekim” ≠ “1 Ekim”), kısa kelimeler aynen.
-- Aramayı yalnızca **Türkçe** başlık açıklayabilir (kural tabanlı: Türkçe harf yoksa ve en az 2 yabancı bağlaç/edat varsa başlık yabancı sayılır). Google’ın ilgili haberleri yabancı sitelerden de gelebildiği için gerekli.
+- Aramayı yalnızca **Türkçe** başlık açıklayabilir (kural tabanlı). Türkçe sayılmak için olumlu işaret gerekir: Türkçe harf, Türkçe sık kelime ya da Türkçe ek. Türkçede olmayan harf (ñ, ä, ß, é…), tek başına yabancı dili gösteren kelime (für, und, los, these…) ya da 2+ yabancı bağlaç varsa yabancıdır. Google’ın ilgili haberleri yabancı sitelerden de gelebildiği için gerekli.
 - Takvim soruları (“6 ekim ne günü”, “hangi güne denk geliyor”) tarih araması olarak elenir.
 - Daha önce bağlanmış uymayan ilgili haberler her güncellemede konudan çıkarılır.
 
