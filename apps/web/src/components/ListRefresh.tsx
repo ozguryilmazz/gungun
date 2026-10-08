@@ -1,61 +1,63 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import styles from "./ListRefresh.module.css";
 
 /** Liste bu aralıkla kendiliğinden yenilenir */
 export const AUTO_REFRESH_MS = 15 * 60_000;
-/** Yenileme bu sürede bitmezse (ör. bilgisayar uykudan döndü, bağlantı koptu) düğme serbest kalır */
-const STUCK_AFTER_MS = 15_000;
+const SCROLL_KEY = "gundemci:scrollY";
 
 interface Props {
   /** Son yenileme saati (sunucuda biçimlenmiş, ör. "14:05") */
   refreshedAt: string;
 }
 
+/** Sayfayı yeniden yükler; kaydırma konumu saklanır ve yükleme sonrası geri getirilir */
+function reloadKeepingScroll() {
+  try {
+    sessionStorage.setItem(SCROLL_KEY, String(window.scrollY));
+  } catch {
+    // Tarayıcı depolamaya izin vermiyorsa sayfanın başından açılır
+  }
+  window.location.reload();
+}
+
 /**
  * "Listeyi yenile" düğmesi + 15 dakikada bir kendiliğinden yenileme.
- * Sekme arka plandayken yenilenmez; sekmeye dönüldüğünde süre dolmuşsa hemen yenilenir.
- * Yenileme sunucudan yeni listeyi alır; kaydırma konumu korunur.
+ * Sayfa tamamen yeniden yüklenir (en güvenilir yol: takılan istek, uykudan dönen bilgisayar,
+ * önbellekteki eski veri sorun olmaz); kaydırma konumu korunur.
+ * Sekme arka plandayken beklenir; sekmeye dönüldüğünde süre dolmuşsa hemen yenilenir.
  */
 export function ListRefresh({ refreshedAt }: Props) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [stuck, setStuck] = useState(false);
-  const last = useRef(Date.now());
-  // Takılan yenileme düğmeyi sonsuza kadar kilitlemesin
-  const busy = pending && !stuck;
+  const [busy, setBusy] = useState(false);
+  const loadedAt = useRef(Date.now());
 
+  // Yenilemeden önceki kaydırma konumuna dön
   useEffect(() => {
-    if (!pending) {
-      setStuck(false);
-      return;
+    try {
+      const y = sessionStorage.getItem(SCROLL_KEY);
+      if (y !== null) {
+        sessionStorage.removeItem(SCROLL_KEY);
+        window.scrollTo(0, Number(y) || 0);
+      }
+    } catch {
+      // yoksay
     }
-    const t = setTimeout(() => setStuck(true), STUCK_AFTER_MS);
-    return () => clearTimeout(t);
-  }, [pending]);
-
-  const refresh = () => {
-    last.current = Date.now();
-    setStuck(false);
-    startTransition(() => router.refresh());
-  };
-  const refreshRef = useRef(refresh);
-  refreshRef.current = refresh;
+  }, []);
 
   useEffect(() => {
-    const due = () => Date.now() - last.current >= AUTO_REFRESH_MS;
-    const timer = setInterval(() => {
-      if (document.visibilityState === "visible" && due()) refreshRef.current();
-    }, 30_000);
-    const onVisible = () => {
-      if (document.visibilityState === "visible" && due()) refreshRef.current();
+    const due = () => Date.now() - loadedAt.current >= AUTO_REFRESH_MS;
+    const check = () => {
+      if (document.visibilityState === "visible" && due()) reloadKeepingScroll();
     };
-    document.addEventListener("visibilitychange", onVisible);
+    // Süre, sekme arka plandayken ya da bilgisayar uykudayken de işler; dönüşte hemen kontrol edilir
+    const timer = setInterval(check, 30_000);
+    document.addEventListener("visibilitychange", check);
+    window.addEventListener("focus", check);
     return () => {
       clearInterval(timer);
-      document.removeEventListener("visibilitychange", onVisible);
+      document.removeEventListener("visibilitychange", check);
+      window.removeEventListener("focus", check);
     };
   }, []);
 
@@ -64,7 +66,10 @@ export function ListRefresh({ refreshedAt }: Props) {
       <button
         type="button"
         className={styles.btn}
-        onClick={refresh}
+        onClick={() => {
+          setBusy(true);
+          reloadKeepingScroll();
+        }}
         disabled={busy}
         aria-label="Listeyi şimdi yenile"
       >

@@ -191,3 +191,5 @@ Kural tabanlı (`apps/api/src/topics-pipeline/term-filter.ts`), yapay zekâ yok:
 
 - **Yenileme:** Alttaki “yeni konu” şeridi kaldırıldı. Liste **15 dakikada bir** kendiliğinden yenilenir (sekme arka plandayken beklenir, dönünce süre dolmuşsa hemen yenilenir). Başlığın altında **“Listeyi yenile”** düğmesi ve sayfanın son yenilenme saati var.
 - **Sıra okları:** Her kartta sıra numarasının altında **~1 saat öncesine göre** değişim: yeşil ▲N yükseldi, kırmızı ▼N düştü, yeşil “▲ YENİ” son 24 saatte listede yoktu, “–” değişmedi. Karşılaştırma ölçümü 2 saatten eskiyse (ör. sistem kapalıydı) ok gösterilmez (`TopicSummary.movement`).
+
+- **Yenileme yöntemi (güncellendi):** Otomatik yenileme ve “Listeyi yenile” düğmesi sayfayı **tamamen yeniden yükler**; kaydırma konumu korunur. Sayfa içi yenileme (router.refresh) bazı durumlarda (uykudan dönen bilgisayar, kopan bağlantı) bitmiyordu. Web tarafında API yanıtları önbelleğe alınmaz (süresi dolmuş önbellek ilk istekte eski veriyi gösteriyordu); önbellek yalnızca API’de (30 sn).

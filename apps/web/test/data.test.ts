@@ -110,18 +110,10 @@ describe("veri katmanı → API", () => {
     await expect(getTopic("ornek-konu")).rejects.toBeInstanceOf(DataUnavailableError);
   });
 
-  it("önbellekteki eski sürüm yanıtı uymazsa önbellek atlanıp bir kez yeniden istenir", async () => {
-    // Güncelleme sonrası önbellekte yeni alanları olmayan eski yanıt kalmış olabilir
-    const { sparkline: _omit, ...oldSummary } = summary;
-    void _omit;
-    fetchMock
-      .mockResolvedValueOnce(json({ ...listBody, items: [oldSummary] }))
-      .mockResolvedValueOnce(json(listBody));
-    const list = await getTopicList();
-    expect(list.items[0]?.sparkline).toEqual([55, 70, 92]);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls[1]?.[1]?.cache).toBe("no-store");
-    expect(console.error).not.toHaveBeenCalled();
+  it("web tarafında önbellek kullanılmaz (eski veri gösterilmesin)", async () => {
+    fetchMock.mockResolvedValue(json(listBody));
+    await getTopicList();
+    expect(fetchMock.mock.calls[0]?.[1]?.cache).toBe("no-store");
   });
 
   it("API hatası, ağ hatası ve bozuk JSON → DataUnavailableError", async () => {

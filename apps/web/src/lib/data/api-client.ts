@@ -6,7 +6,6 @@ import type { z } from "zod";
 const DEFAULT_API_URL = "http://127.0.0.1:4000";
 // Geliştirmede sayfalar ilk açılışta derlenirken sunucu birkaç saniye meşgul kalabilir
 const TIMEOUT_MS = process.env.NODE_ENV === "production" ? 5_000 : 10_000;
-const REVALIDATE_SECONDS = 30;
 
 /** Veri alınamadı (ağ, zaman aşımı, 5xx, sözleşmeye uymayan yanıt). Ayrıntı yalnızca logda. */
 export class DataUnavailableError extends Error {
@@ -43,16 +42,9 @@ export async function apiGet<T>(path: string, schema: z.ZodType<T>): Promise<T |
   const url = new URL(path, apiBaseUrl());
   if (url.origin !== apiBaseUrl().origin) throw new Error("API dışına istek engellendi");
 
-  const first = await fetchJson(url, "cached");
-  if (first === null) return null;
-  let parsed = schema.safeParse(first);
-  if (!parsed.success) {
-    // Önbellekteki yanıt eski sürümden kalmış olabilir (ör. güncelleme sonrası yeni alanlar yok):
-    // önbelleği atlayıp bir kez daha doğrudan API'den istenir
-    const fresh = await fetchJson(url, "no-store");
-    if (fresh === null) return null;
-    parsed = schema.safeParse(fresh);
-  }
+  const body = await fetchJson(url);
+  if (body === null) return null;
+  const parsed = schema.safeParse(body);
   if (!parsed.success) {
     console.error(
       `[api] ${url.pathname} yanıtı sözleşmeye uymuyor`,
@@ -64,16 +56,16 @@ export async function apiGet<T>(path: string, schema: z.ZodType<T>): Promise<T |
 }
 
 /** Tek istek: 404 → null; ağ hatası, 5xx ve JSON olmayan yanıt → DataUnavailableError */
-async function fetchJson(url: URL, mode: "cached" | "no-store"): Promise<unknown> {
+async function fetchJson(url: URL): Promise<unknown> {
   let response: Response;
   try {
     response = await fetch(url, {
       headers: { accept: "application/json" },
       signal: AbortSignal.timeout(TIMEOUT_MS),
       redirect: "error",
-      ...(mode === "cached"
-        ? { next: { revalidate: REVALIDATE_SECONDS } }
-        : { cache: "no-store" as const }),
+      // Web tarafında önbellek yok: önbellekte süresi dolmuş yanıt ilk istekte eski veriyi
+      // gösteriyordu. Önbellek API'de (kısa süreli, tüm ziyaretçiler için ortak).
+      cache: "no-store",
     });
   } catch (error) {
     // Zaman aşımı / bağlantı hatası geçicidir ve sayfayı bozmaz (bölüm "güncellenemiyor" gösterir)
