@@ -254,3 +254,9 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+.growth {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--rank-up);
+}

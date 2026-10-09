@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { formatChange, formatClock, formatRelative, formatSearchVolume } from "../src/lib/format";
+import {
+  formatChange,
+  formatClock,
+  formatGrowth,
+  formatRelative,
+  formatSearchVolume,
+} from "../src/lib/format";
 
 describe("formatRelative", () => {
   const now = new Date("2026-10-05T12:00:00Z");
@@ -39,5 +45,16 @@ describe("formatSearchVolume", () => {
     expect(formatSearchVolume({ approxTraffic: 2000, sinceHours: 0 })).toBe(
       "Son 1 saatte 2.000+ arama",
     );
+  });
+});
+
+describe("formatGrowth", () => {
+  const now = new Date("2026-10-05T12:00:00Z");
+  const ago = (min: number) => new Date(now.getTime() - min * 60_000).toISOString();
+
+  it("ne kadar önce kaç yeni kaynak eklendiği", () => {
+    expect(formatGrowth(ago(12), 2, now)).toBe("12 dk önce 2 yeni kaynak eklendi");
+    expect(formatGrowth(ago(0), 1, now)).toBe("Az önce 1 yeni kaynak eklendi");
+    expect(formatGrowth(ago(130), 3, now)).toBe("2 saat önce 3 yeni kaynak eklendi");
   });
 });

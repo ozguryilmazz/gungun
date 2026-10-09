@@ -94,7 +94,7 @@ Yapay zekâ kullanılmaz; her adım kurala dayalıdır ve açıklanabilir.
    Arşiv sayfaları: `/arsiv`.
 7. **Ortak haberler:** Trend aramasından bağımsız ayrı liste (`/ortak-haberler`). Aynı haberi en az **3**
    farklı site yayımladıysa listelenir; site sayısına göre sıralanır, en fazla 15 haber. Sonraki
-   taramalarda yeni siteler eklenirse "N haber sitesinde daha yayımlandı" notu çıkar.
+   taramalarda yeni siteler eklenirse "12 dk önce 2 yeni kaynak eklendi" notu çıkar.
 
 ## API (v1)
 

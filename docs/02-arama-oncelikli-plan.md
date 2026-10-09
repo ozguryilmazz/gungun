@@ -193,7 +193,7 @@ Kural tabanlı (`apps/api/src/topics-pipeline/term-filter.ts`), yapay zekâ yok:
 - **Amaç:** Trend aramalarından bağımsız ikinci bir liste. RSS ile taranan haber sitelerinde **aynı haberi en az 3 farklı site** yayımladıysa listelenir.
 - **Nasıl:** Her taramadan sonra (gündem üretiminin son adımı, `topics-pipeline/stories.ts`) son 24 saatin RSS haberleri benzer başlıklara göre gruplanır (aynı `cluster.ts`). Yapay zekâ yok.
   - Grup ilk kez 3 farklı siteye ulaştığı taramada listeye girer (`listed_at`).
-  - Sonraki taramalarda başka siteler de yayımlarsa site sayısı artar. O taramanın zamanı ve eklenen site sayısı saklanır (`last_growth_at`, `last_growth_by`). Arayüzde “Son güncellemeden sonra N haber sitesinde daha yayımlandı (saat)” notu çıkar.
+  - Sonraki taramalarda başka siteler de yayımlarsa site sayısı artar. O taramanın zamanı ve eklenen site sayısı saklanır (`last_growth_at`, `last_growth_by`). Arayüzde “12 dk önce 2 yeni kaynak eklendi” biçiminde not çıkar (üzerine gelince saat). Aynı not detay sayfasının başında ve taramalara göre yayılma çizelgesinde de görünür.
   - Aynı sitenin ikinci haberi site sayısını artırmaz.
 - **Sıralama:** Yayımlayan site sayısına göre (çoktan aza); eşitlikte son değişimi daha yeni olan üstte. En fazla 15 haber. İlk haberi 24 saatten eski olan listeden çıkar.
 - **Gösterilen:** Başlık (yayımlayan sitelerden birinin başlığı, sakinleştirilmiş), site sayısı, ilk haberin zamanı, büyüme notu ve her sitenin orijinal haberine bağlantı. Haber metni alınmaz.

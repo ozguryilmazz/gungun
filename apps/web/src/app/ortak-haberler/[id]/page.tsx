@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SpreadChart } from "@/components/SpreadChart";
 import { getStory } from "@/lib/data";
-import { formatClock, formatRelative } from "@/lib/format";
+import { formatClock, formatGrowth } from "@/lib/format";
 import styles from "./page.module.css";
 
 export const dynamic = "force-dynamic";
@@ -60,8 +60,15 @@ export default async function StoryPage({ params }: Props) {
         <h1 className={styles.title}>{story.title}</h1>
         <p className={styles.dates}>
           {story.publisherCount} haber sitesinde · listeye girdi {formatClock(story.listedAt)}
-          {story.lastGrowthAt ? ` · son güncelleme ${formatRelative(story.lastGrowthAt, now)}` : ""}
         </p>
+        {story.lastGrowthAt && story.lastGrowthBy ? (
+          <p className={styles.growth}>
+            <span aria-hidden="true">▲ </span>
+            <time dateTime={story.lastGrowthAt} title={formatClock(story.lastGrowthAt)}>
+              {formatGrowth(story.lastGrowthAt, story.lastGrowthBy, now)}
+            </time>
+          </p>
+        ) : null}
         <p className={styles.fine}>
           Başlık, haberi yayımlayan sitelerden birinin başlığıdır. Haber metni alınmaz; bağlantılar
           orijinal habere gider.
@@ -133,7 +140,7 @@ export default async function StoryPage({ params }: Props) {
                     <strong>
                       {i === 0
                         ? `Listeye girdi (${scan.sites.length} site)`
-                        : `+${scan.sites.length} haber sitesinde daha yayımlandı`}
+                        : formatGrowth(scan.at, scan.sites.length, now)}
                     </strong>
                     <span className={styles.scanSites}>{scan.sites.join(", ")}</span>
                   </span>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { NewsStoryListResponse } from "@gundemci/shared";
-import { formatClock, formatRelative } from "@/lib/format";
+import { formatClock, formatGrowth, formatRelative } from "@/lib/format";
 import styles from "./NewsStories.module.css";
 
 interface Props {
@@ -53,8 +53,9 @@ export function NewsStories({ data, compact = false, headingLevel = "h2" }: Prop
                 {s.lastGrowthAt && s.lastGrowthBy ? (
                   <p className={styles.growth}>
                     <span aria-hidden="true">▲ </span>
-                    Son güncellemeden sonra {s.lastGrowthBy} haber sitesinde daha yayımlandı (
-                    {formatClock(s.lastGrowthAt)})
+                    <time dateTime={s.lastGrowthAt} title={formatClock(s.lastGrowthAt)}>
+                      {formatGrowth(s.lastGrowthAt, s.lastGrowthBy, now)}
+                    </time>
                   </p>
                 ) : (
                   <p className={styles.listed}>Listeye girdi: {formatClock(s.listedAt)}</p>

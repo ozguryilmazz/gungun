@@ -26,6 +26,13 @@ export function formatRelative(iso: string, now: Date = new Date()): string {
   return `${Math.floor(hours / 24)} gün önce`;
 }
 
+/** Ortak habere yeni site eklenmesi: "12 dk önce 2 yeni kaynak eklendi", "Az önce 1 yeni kaynak eklendi" */
+export function formatGrowth(iso: string, count: number, now: Date = new Date()): string {
+  const when = formatRelative(iso, now);
+  const text = `${when} ${count} yeni kaynak eklendi`;
+  return text.charAt(0).toLocaleUpperCase("tr-TR") + text.slice(1);
+}
+
 /** İstanbul saatine göre "14:05" */
 export function formatClock(iso: string): string {
   return clockFormatter.format(new Date(iso));
