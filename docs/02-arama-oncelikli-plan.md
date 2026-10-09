@@ -131,17 +131,11 @@ Sonraki aşamaların numaraları birer kayar: güvenlik sertleştirme 11, SEO 12
 - **Arayüz:** Ana sayfada “YouTube’da Türkiye trendleri” (ilk 10) ve `/youtube` (ilk 50). Video sitede oynatılmaz; bağlantı YouTube’a gider. Kaynak olarak YouTube belirtilir.
 - **Sosyal sinyal (skorun %25’i):** Trend terimi YouTube trend videolarının başlığında geçiyorsa en iyi sıraya göre değer alır (1. sıra = 1,0; 50. sıra ≈ 0,3; her ek video +0,1, en fazla +0,2). Geçmiyorsa 0. YouTube listesi 2 saatten eskiyse “Veri bekleniyor”. Haber konularında sosyal sinyal ölçülmez.
 
-### Açıklaması olmayan aramalar ve haber araması (GDELT)
+### Açıklaması olmayan aramalar ve haber araması (GDELT — kaldırıldı)
 
 - **Sıralama:** Trend listesinde önce aramayı açıklayan en az bir haberi olan konular, sonra açıklaması bulunamayanlar gelir. Her grup kendi içinde skora göre sıralanır; skor değişmez. Kartta “açıklayan haber henüz bulunamadı” notu gösterilir.
 - **İlk deneme: Google Haberler (kaldırıldı).** `news.google.com/robots.txt` tüm botlara `Disallow: /` diyor; `/rss/search` izinli yollar arasında değil. Sağlayıcı robots.txt denetimi sayesinde hiç istek atmadı ve kaldırıldı (`RETIRED_PROVIDER_KEYS`, seed sırasında silinir).
-- **Sağlayıcı `gdelt_news`:** Güncel her trend terimi için GDELT DOC 2.0 API’sinde (`api.gdeltproject.org/api/v2/doc/doc`, `sourcelang:turkish`, son 1 gün) arama yapar. GDELT’in isteği üzerine istekler arasında 5,5 sn beklenir; tur başına en fazla 15 terim. Düz metin “limit requests” uyarısı 429 gibi ele alınır. Kaynak adı, alan adı yayıncı listemizdeyse yayıncı adıdır. Site altında GDELT kaynak olarak anılır.
-- Ortak mantık `apps/api/src/ingest/news-search.ts`’te (başka bir arama kaynağı eklemek için yalnızca adres ve ayrıştırıcı gerekir):
-  - Yalnızca başlık, kaynak adı ve bağlantı alınır; yalnızca başlığında terim geçen, son 48 saatin haberleri. Terim başına en fazla 10 haber.
-  - **robots.txt** her çalışmada denetlenir (6 saat önbellek). İzin yoksa ya da okunamazsa hiç istek atılmaz.
-  - Aynı terim en fazla saatte bir aranır; istekler arasında kaynağın istediği kadar beklenir; 429 alınırsa o çalışma durur.
-  - Veritabanı: `trend_news_links` (terim ↔ haber) ve `trend_news_searches` (son arama zamanı), migration `0004_trend_news`.
-- **Pipeline:** Bulunan haberler Google’ın ilgili haberleriyle birlikte trend konusuna bağlanır; kart başlığı ve “Neden gündemde?” kaynakları bunlardan gelir.
+- **GDELT (kaldırıldı, kullanıcı kararı):** `gdelt_news` sağlayıcısı GDELT DOC 2.0 API’sinde trend terimlerini arıyordu. İstek sınırı (5 sn’de bir) çok dar olduğu için tek istekte bile sık sık 429 alındı ve kaldırıldı. Migration `0006_retire_gdelt` GDELT’in bulduğu haber kayıtlarını, sağlayıcı kaydını ve `trend_news_links` / `trend_news_searches` tablolarını siler. Ortak arama kodu (`news-search.ts`) da kaldırıldı.
 - **Değerlendirilip reddedilenler:** pytrends ve ücretli SERP servisleri (SerpApi vb.) Google’ı kazıyıp bot korumasını aştığı için kullanılmaz. Google Trends API (alpha) şimdilik beklemede.
 
 ### Arama filtresi (gündem başlığı olamayacak aramalar)
@@ -183,7 +177,7 @@ Kural tabanlı (`apps/api/src/topics-pipeline/term-filter.ts`), yapay zekâ yok:
 ### Açıklaması olmayan aramalar listelenmez (karar güncellendi)
 
 - Önceki karar (“aşağı it”) yerine: aramayı açıklayan **en az bir Türkçe haber** yoksa trend konusu **listelenmez**; kelime sayısı fark etmez.
-- Açıklama kaynakları: eşleşen RSS haber kümesi, Google’ın ilgili haberleri (filtrelenmiş) ve haber araması (GDELT). Daha önce bağlanmış uymayan haberler kontrol öncesinde temizlenir.
+- Açıklama kaynakları: eşleşen RSS haber kümesi ve Google’ın ilgili haberleri (filtrelenmiş). Haber araması (GDELT) kaldırıldı. Daha önce bağlanmış uymayan haberler kontrol öncesinde temizlenir.
 - Açıklaması olmayan konu “Filtre: Aramayı açıklayan haber bulunamadı” işaretiyle gizlenir; haber bulununca kendiliğinden yeniden görünür.
 - “İlk 5’e girdi” olayı da sitedeki sıralamayla aynı kuralla hesaplanır.
 
@@ -193,3 +187,17 @@ Kural tabanlı (`apps/api/src/topics-pipeline/term-filter.ts`), yapay zekâ yok:
 - **Sıra okları:** Her kartta sıra numarasının altında **~1 saat öncesine göre** değişim: yeşil ▲N yükseldi, kırmızı ▼N düştü, yeşil “▲ YENİ” son 24 saatte listede yoktu, “–” değişmedi. Karşılaştırma ölçümü 2 saatten eskiyse (ör. sistem kapalıydı) ok gösterilmez (`TopicSummary.movement`).
 
 - **Yenileme yöntemi (güncellendi):** Otomatik yenileme ve “Listeyi yenile” düğmesi sayfayı **tamamen yeniden yükler**; kaydırma konumu korunur. Sayfa içi yenileme (router.refresh) bazı durumlarda (uykudan dönen bilgisayar, kopan bağlantı) bitmiyordu. Web tarafında API yanıtları önbelleğe alınmaz (süresi dolmuş önbellek ilk istekte eski veriyi gösteriyordu); önbellek yalnızca API’de (30 sn).
+
+### Ortak haberler (çok sitede yayımlanan haberler)
+
+- **Amaç:** Trend aramalarından bağımsız ikinci bir liste. RSS ile taranan haber sitelerinde **aynı haberi en az 3 farklı site** yayımladıysa listelenir.
+- **Nasıl:** Her taramadan sonra (gündem üretiminin son adımı, `topics-pipeline/stories.ts`) son 24 saatin RSS haberleri benzer başlıklara göre gruplanır (aynı `cluster.ts`). Yapay zekâ yok.
+  - Grup ilk kez 3 farklı siteye ulaştığı taramada listeye girer (`listed_at`).
+  - Sonraki taramalarda başka siteler de yayımlarsa site sayısı artar. O taramanın zamanı ve eklenen site sayısı saklanır (`last_growth_at`, `last_growth_by`). Arayüzde “Son güncellemeden sonra N haber sitesinde daha yayımlandı (saat)” notu çıkar.
+  - Aynı sitenin ikinci haberi site sayısını artırmaz.
+- **Sıralama:** Yayımlayan site sayısına göre (çoktan aza); eşitlikte son değişimi daha yeni olan üstte. En fazla 15 haber. İlk haberi 24 saatten eski olan listeden çıkar.
+- **Gösterilen:** Başlık (yayımlayan sitelerden birinin başlığı, sakinleştirilmiş), site sayısı, ilk haberin zamanı, büyüme notu ve her sitenin orijinal haberine bağlantı. Haber metni alınmaz.
+- **Veritabanı:** `news_stories`, `news_story_items` (bir haber yalnızca bir ortak habere bağlanır), migration `0005_stories`.
+- **API:** `GET /api/v1/stories?limit=` (1–15, varsayılan 15).
+- **Arayüz:** `/ortak-haberler` sayfası (15 haber ve kaynakları) ve menüde “Ortak haberler”. Ana sayfada ilk 5 haber.
+- **Mevcut “Haberlerde öne çıkanlar” ile fark:** O bölüm yalnızca trend aramasıyla eşleşmeyen ve en az 4 kaynakta geçen haber konularını gösterir. Ortak haberler listesi trend olsun olmasın tüm ortak haberleri kapsar.

@@ -5,6 +5,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { errorBody, sendError } from "./lib/errors.ts";
 import { archiveRoutes } from "./modules/archive/routes.ts";
 import { healthRoutes, metaRoutes } from "./modules/meta/routes.ts";
+import { storyRoutes } from "./modules/stories/routes.ts";
 import type { TopicRepository } from "./modules/topics/repository.ts";
 import { topicRoutes } from "./modules/topics/routes.ts";
 import { TopicService } from "./modules/topics/service.ts";
@@ -96,6 +97,11 @@ export async function buildApp(opts: AppOptions): Promise<FastifyInstance> {
       await v1.register(metaRoutes, { service, repo: opts.repo });
       await v1.register(archiveRoutes, { repo: opts.repo });
       await v1.register(youtubeRoutes, { repo: opts.repo, cacheTtlSeconds: opts.cacheTtlSeconds });
+      await v1.register(storyRoutes, {
+        repo: opts.repo,
+        cacheTtlSeconds: opts.cacheTtlSeconds,
+        ...(opts.clock ? { clock: opts.clock } : {}),
+      });
     },
     { prefix: "/api/v1" },
   );

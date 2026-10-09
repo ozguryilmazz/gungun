@@ -1,5 +1,5 @@
 // Bir veri sağlayıcısını HEMEN, bir kez çalıştırır (kapalı olsa bile) ve kaynak bazında sonucu yazdırır.
-// Kullanım: pnpm fetch:once rss_news | google_trends | gdelt_news | youtube_trending | all
+// Kullanım: pnpm fetch:once rss_news | google_trends | youtube_trending | all
 import { createDb } from "@gundemci/db";
 import pino from "pino";
 import { loadConfig } from "../config.ts";
@@ -40,16 +40,12 @@ try {
         continue;
       }
       const notes: string[] = [];
-      if (d.matched !== undefined) {
-        notes.push(`kaynaktan ${d.parsed ?? 0} haber, başlığında terim geçen ${d.matched}`);
-      } else if (d.parsed !== undefined) notes.push(`akışta ${d.parsed} öğe`);
+      if (d.parsed !== undefined) notes.push(`akışta ${d.parsed} öğe`);
       if (d.offDomain) {
         notes.push(`${d.offDomain} başka alan adına gidiyor (${d.offDomainHosts?.join(", ")})`);
       }
-      // Akış boşsa veya tüm bağlantılar başka alan adına gidiyorsa uyarı (aramada 0 sonuç olağandır)
-      const warn =
-        d.matched === undefined &&
-        (d.parsed === 0 || (d.parsed !== undefined && d.offDomain === d.parsed));
+      // Akış boşsa veya tüm bağlantılar başka alan adına gidiyorsa uyarı
+      const warn = d.parsed === 0 || (d.parsed !== undefined && d.offDomain === d.parsed);
       const suffix = notes.length ? ` — ${notes.join(", ")}` : "";
       console.log(`  ${warn ? "⚠" : "✔"} ${d.name.padEnd(22)} ${d.items} yeni kayıt${suffix}`);
     }

@@ -1,4 +1,9 @@
-import type { StatusResponse, TopicListResponse, YoutubeListResponse } from "@gundemci/shared";
+import type {
+  NewsStoryListResponse,
+  StatusResponse,
+  TopicListResponse,
+  YoutubeListResponse,
+} from "@gundemci/shared";
 import { CHANGE_WINDOW_HOURS } from "@gundemci/shared";
 import Link from "next/link";
 import { formatClock, formatDate, formatRelative } from "@/lib/format";
@@ -7,6 +12,7 @@ import { ListRefresh } from "./ListRefresh";
 import { MockBanner } from "./MockBanner";
 import { MovementList } from "./MovementList";
 import { NewsHighlights } from "./NewsHighlights";
+import { NewsStories } from "./NewsStories";
 import { SourceStatus } from "./SourceStatus";
 import { TopicCard } from "./TopicCard";
 import styles from "./TopicFeed.module.css";
@@ -23,6 +29,8 @@ interface Props {
   news: TopicListResponse | null;
   /** Verilmezse bölüm gösterilmez (ör. kategori sayfaları) */
   youtube?: YoutubeListResponse | null;
+  /** Ortak haberler (en az 3 sitede); verilmezse bölüm gösterilmez */
+  stories?: NewsStoryListResponse | null;
 }
 
 /** Ana sayfa ve kategori sayfalarının ortak düzeni */
@@ -35,6 +43,7 @@ export function TopicFeed({
   status,
   news,
   youtube,
+  stories,
 }: Props) {
   const now = new Date(list.meta.generatedAt);
   const isMock = list.meta.isMock || !!rising?.meta.isMock || !!falling?.meta.isMock;
@@ -80,6 +89,8 @@ export function TopicFeed({
               ))}
             </ol>
           )}
+
+          {stories !== undefined ? <NewsStories data={stories} compact /> : null}
 
           {youtube !== undefined ? <YoutubeTrends data={youtube} compact /> : null}
 

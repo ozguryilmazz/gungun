@@ -5,6 +5,7 @@ import {
   ArchiveDateSchema,
   ArchiveDayResponseSchema,
   ArchiveIndexResponseSchema,
+  NewsStoryListResponseSchema,
   StatusResponseSchema,
   TopicDetailResponseSchema,
   TopicListResponseSchema,
@@ -12,6 +13,7 @@ import {
   isValidSlug,
   type ArchiveDayResponse,
   type ArchiveIndexResponse,
+  type NewsStoryListResponse,
   type StatusResponse,
   type TopicDetailResponse,
   type TopicListResponse,
@@ -78,4 +80,10 @@ export async function getArchiveDay(date: string): Promise<ArchiveDayResponse | 
 /** YouTube Türkiye trend videoları (en güncel liste; 24 saatten eskiyse boş) */
 export async function getYoutube(limit = 10): Promise<YoutubeListResponse> {
   return required(apiGet(`/api/v1/youtube?limit=${clampLimit(limit)}`, YoutubeListResponseSchema));
+}
+
+/** Ortak haberler: en az 3 haber sitesinde yayımlanan son 24 saatin haberleri (en fazla 15) */
+export async function getStories(limit = 15): Promise<NewsStoryListResponse> {
+  const n = Math.min(Math.max(Math.trunc(limit) || 1, 1), 15);
+  return required(apiGet(`/api/v1/stories?limit=${n}`, NewsStoryListResponseSchema));
 }

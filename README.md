@@ -58,8 +58,7 @@ pnpm dev
 ## Veri toplama
 
 - **Sağlayıcılar:** `rss_news` (19 haber sitesinin RSS'i), `google_trends` (Türkiye trend RSS'i) ve
-  `gdelt_news` (GDELT Project haber arama API'si: trend aramaları açıklayan Türkçe haberler; robots.txt
-  her çalışmada denetlenir) ve `youtube_trending` (resmi YouTube Data API v3, Türkiye trend videoları; `.env`'de `YOUTUBE_API_KEY` gerekir).
+  `youtube_trending` (resmi YouTube Data API v3, Türkiye trend videoları; `.env`'de `YOUTUBE_API_KEY` gerekir).
   Hepsi **kapalı** başlar.
 - **Ne alınır:** Yalnızca başlık, bağlantı ve yayın zamanı. Haber metni alınmaz.
 - **Güvenlik:** Dış istekler yalnızca kayıtlı adreslere gider. İç ağ adresleri, aşırı büyük yanıtlar ve
@@ -75,7 +74,6 @@ pnpm trends:filter    # son trend listesinde hangi arama neden elendi
 pnpm feeds:discover --dizin https://www.gazeteler.de/   # dizindeki sitelerin RSS adreslerini bulur ve doğrular
 pnpm providers enable rss_news
 pnpm providers enable google_trends
-pnpm providers enable gdelt_news
 pnpm providers enable youtube_trending
 pnpm worker           # açık sağlayıcıları 10–15 dakikada bir çalıştırır (Ctrl+C ile durur)
 ```
@@ -94,6 +92,9 @@ Yapay zekâ kullanılmaz; her adım kurala dayalıdır ve açıklanabilir.
    alır (kaç kaynakta geçtiği, son saatteki haber sayısı, eşleşen arama trendi).
 6. **Yaşam döngüsü:** 6 saat yeni haber gelmezse konu "soğuyan", 24 saat gelmezse "arşiv" olur.
    Arşiv sayfaları: `/arsiv`.
+7. **Ortak haberler:** Trend aramasından bağımsız ayrı liste (`/ortak-haberler`). Aynı haberi en az **3**
+   farklı site yayımladıysa listelenir; site sayısına göre sıralanır, en fazla 15 haber. Sonraki
+   taramalarda yeni siteler eklenirse "N haber sitesinde daha yayımlandı" notu çıkar.
 
 ## API (v1)
 
@@ -103,6 +104,7 @@ Yapay zekâ kullanılmaz; her adım kurala dayalıdır ve açıklanabilir.
 | `GET /api/v1/topics/rising`           | Şu anda yükselenler (en az 3 kaynaklı)        |
 | `GET /api/v1/topics/falling`          | Gündemden düşenler                            |
 | `GET /api/v1/topics/:slug`            | Konu detayı: skor bileşenleri, kaynaklar…     |
+| `GET /api/v1/stories?limit=`          | Ortak haberler (en az 3 sitede, en fazla 15)  |
 | `GET /api/v1/topics/:slug/history`    | Son 24 saatin skor geçmişi                    |
 | `GET /api/v1/categories`              | Kategoriler                                   |
 | `GET /api/v1/meta/status`             | Veri kaynaklarının durumu                     |

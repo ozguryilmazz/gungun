@@ -35,20 +35,6 @@ export const DATA_PROVIDERS: readonly ProviderSeed[] = [
     },
   },
   {
-    // GDELT Project DOC API (herkese açık, ücretsiz): trend aramaların nedenini açıklayan Türkçe
-    // haberler. Yalnızca başlık, kaynak adı ve bağlantı; robots.txt her çalışmada denetlenir.
-    key: "gdelt_news",
-    kind: "news",
-    name: "GDELT (trend açıklamaları)",
-    config: {
-      minIntervalMinutes: 15,
-      perTermMinutes: 60,
-      maxTermsPerRun: 15,
-      requestDelayMs: 5500,
-      userAgent: BOT_USER_AGENT,
-    },
-  },
-  {
     // Resmi YouTube Data API v3; anahtar .env'deki YOUTUBE_API_KEY (yalnızca sunucuda)
     key: "youtube_trending",
     kind: "social",
@@ -64,8 +50,9 @@ export const DATA_PROVIDERS: readonly ProviderSeed[] = [
 /**
  * Kullanımdan kaldırılan sağlayıcılar: seed sırasında silinir (kaydı yoksa).
  * google_news_search: news.google.com robots.txt'i /rss/search'e bot erişimine izin vermiyor.
+ * gdelt_news: istek sınırı çok dar (sık 429); kaldırıldı. Kayıtları 0005 migration'ında silindi.
  */
-export const RETIRED_PROVIDER_KEYS: readonly string[] = ["google_news_search"];
+export const RETIRED_PROVIDER_KEYS: readonly string[] = ["google_news_search", "gdelt_news"];
 
 export interface PublisherSeed {
   name: string;

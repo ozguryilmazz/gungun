@@ -11,8 +11,7 @@ export function SiteFooter() {
           gündemci haber üretmez; kaynakları analiz eder ve orijinal habere bağlantı verir.
         </p>
         <p className={styles.note}>
-          Veri kaynakları: Google Trends, YouTube, haber sitelerinin RSS akışları ve haber
-          eşleştirme için <a href="https://www.gdeltproject.org/">GDELT Project</a>.
+          Veri kaynakları: Google Trends, YouTube ve haber sitelerinin RSS akışları.
         </p>
         <nav aria-label="Alt menü" className={styles.links}>
           <Link href="/arsiv">Arşiv</Link>

@@ -216,6 +216,37 @@ export const YoutubeListResponseSchema = z.object({
   meta: ResponseMetaSchema,
 });
 
+/** Ortak haberi yayımlayan site ve o sitedeki haberin bağlantısı (haber metni alınmaz) */
+export const NewsStorySourceSchema = z.object({
+  name: z.string().min(1).max(96),
+  url: SafeUrlSchema,
+  publishedAt: isoDate,
+});
+
+/** Ortak haber: aynı olayı en az 3 farklı haber sitesinin yayımladığı haber */
+export const NewsStorySchema = z.object({
+  id: z.number().int().positive(),
+  /** Yayımlayan sitelerden birinin başlığı (bizim yazdığımız metin değil) */
+  title: z.string().min(1).max(300),
+  publisherCount: z.number().int().positive(),
+  firstItemAt: isoDate,
+  /** Listeye girdiği an (3 siteye ulaştığı tarama) */
+  listedAt: isoDate,
+  /** Son büyüme: o taramada kaç site daha yayımladı (hiç büyümediyse null) */
+  lastGrowthAt: isoDate.nullable(),
+  lastGrowthBy: z.number().int().positive().nullable(),
+  sources: z.array(NewsStorySourceSchema).max(50),
+});
+
+export const NewsStoryListResponseSchema = z.object({
+  items: z.array(NewsStorySchema).max(50),
+  /** Haber sitelerinin son başarılı taranma anı; hiç yoksa null */
+  scannedAt: isoDate.nullable(),
+  meta: ResponseMetaSchema,
+});
+
+export type NewsStory = z.infer<typeof NewsStorySchema>;
+export type NewsStoryListResponse = z.infer<typeof NewsStoryListResponseSchema>;
 export type YoutubeVideo = z.infer<typeof YoutubeVideoSchema>;
 export type YoutubeListResponse = z.infer<typeof YoutubeListResponseSchema>;
 export type ArchiveItem = z.infer<typeof ArchiveItemSchema>;

@@ -21,6 +21,8 @@ try {
     console.log(`Arşive düşen          : ${r.archived}`);
     console.log(`Elenen arama          : ${r.filtered} (ayrıntı: pnpm trends:filter)`);
     console.log(`Skor kaydı (snapshot) : ${r.snapshots}`);
+    console.log(`Ortak haber (yeni)    : ${r.storiesCreated}`);
+    console.log(`Ortak haber (büyüyen) : ${r.storiesGrown}`);
   }
 } finally {
   await close();

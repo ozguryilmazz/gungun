@@ -36,6 +36,20 @@
       "when": 1791200977589,
       "tag": "0004_trend_news",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791545532322,
+      "tag": "0005_stories",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791545533425,
+      "tag": "0006_retire_gdelt",
+      "breakpoints": true
     }
   ]
 }

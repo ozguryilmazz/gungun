@@ -67,6 +67,18 @@ export interface YoutubeRow {
   observedAt: Date;
 }
 
+/** Ortak haber: en az 3 sitede yayımlanan haber; her site için ilk haberi */
+export interface StoryRow {
+  id: number;
+  title: string;
+  publisherCount: number;
+  firstItemAt: Date;
+  listedAt: Date;
+  lastGrowthAt: Date | null;
+  lastGrowthBy: number | null;
+  sources: { publisherName: string; url: string; publishedAt: Date }[];
+}
+
 export interface ArchiveRow {
   slug: string;
   title: string;
@@ -89,6 +101,8 @@ export interface TopicRepository {
   archiveDays(limit: number): Promise<{ date: string; topicCount: number }[]>;
   /** `since` sonrasındaki EN SON YouTube trend listesi, sıraya göre */
   latestYoutube(since: Date, limit: number): Promise<YoutubeRow[]>;
+  /** İlk haberi `since` sonrasında olan ortak haberler: site sayısına göre, en fazla `limit` */
+  listStories(since: Date, limit: number): Promise<StoryRow[]>;
   ping(): Promise<void>;
 }
 
@@ -445,6 +459,64 @@ export function createTopicRepository(db: Database): TopicRepository {
         viewCount: r.view_count === null ? null : Number(r.view_count),
         publishedAt: r.published_at === null ? null : asDate(r.published_at),
         observedAt: asDate(r.observed_at),
+      }));
+    },
+
+    async listStories(since, limit) {
+      const stories = await db.execute<{
+        id: number | string;
+        title: string;
+        publisher_count: number;
+        first_item_at: Date | string;
+        listed_at: Date | string;
+        last_growth_at: Date | string | null;
+        last_growth_by: number | null;
+      }>(sql`
+        select id, title, publisher_count, first_item_at, listed_at, last_growth_at, last_growth_by
+        from news_stories
+        where first_item_at >= ${since.toISOString()}
+        order by publisher_count desc, coalesce(last_growth_at, listed_at) desc, id desc
+        limit ${Math.min(Math.max(limit, 1), 50)}
+      `);
+      if (stories.length === 0) return [];
+      const ids = stories.map((s) => Number(s.id));
+      // Her sitenin bu habere ait ilk haberi (aynı site birden çok kez sayılmaz)
+      const sources = await db.execute<{
+        story_id: number | string;
+        publisher_name: string;
+        url: string;
+        at: Date | string;
+      }>(sql`
+        select distinct on (nsi.story_id, si.publisher_id)
+               nsi.story_id, p.name as publisher_name, si.url,
+               coalesce(si.published_at, si.fetched_at) as at
+        from news_story_items nsi
+        join source_items si on si.id = nsi.source_item_id
+        join publishers p on p.id = si.publisher_id
+        where nsi.story_id in (${sql.join(
+          ids.map((id) => sql`${id}`),
+          sql`, `,
+        )})
+          and si.is_mock = false
+        order by nsi.story_id, si.publisher_id, coalesce(si.published_at, si.fetched_at) asc
+      `);
+      const byStory = new Map<number, StoryRow["sources"]>();
+      for (const r of sources) {
+        const list = byStory.get(Number(r.story_id)) ?? [];
+        list.push({ publisherName: r.publisher_name, url: r.url, publishedAt: asDate(r.at) });
+        byStory.set(Number(r.story_id), list);
+      }
+      return stories.map((s) => ({
+        id: Number(s.id),
+        title: s.title,
+        publisherCount: Number(s.publisher_count),
+        firstItemAt: asDate(s.first_item_at),
+        listedAt: asDate(s.listed_at),
+        lastGrowthAt: s.last_growth_at === null ? null : asDate(s.last_growth_at),
+        lastGrowthBy: s.last_growth_by === null ? null : Number(s.last_growth_by),
+        sources: (byStory.get(Number(s.id)) ?? [])
+          .sort((a, b) => a.publishedAt.getTime() - b.publishedAt.getTime())
+          .slice(0, 50),
       }));
     },
 

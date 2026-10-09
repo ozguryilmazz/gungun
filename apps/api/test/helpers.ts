@@ -165,6 +165,10 @@ export function fakeRepo(rows: TopicRow[] = ROWS): FakeRepo {
       count("youtube");
       return [];
     },
+    async listStories() {
+      count("stories");
+      return [];
+    },
     async archiveDay() {
       count("archiveDay");
       return rows

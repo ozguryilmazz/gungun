@@ -12,6 +12,7 @@ export function SiteHeader() {
         <nav aria-label="Ana menü" className={styles.nav}>
           <Link href="/">Gündem</Link>
           <Link href="/#yukselenler">Yükselenler</Link>
+          <Link href="/ortak-haberler">Ortak haberler</Link>
           <Link href="/youtube">YouTube</Link>
           <Link href="/arsiv">Arşiv</Link>
           <Link href="/skor-nasil-hesaplanir">Skor nedir?</Link>

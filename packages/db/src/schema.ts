@@ -154,8 +154,6 @@ export interface FetchRunDetail {
   offDomain?: number;
   /** Örnek atlanan alan adları (teşhis için, en fazla 3) */
   offDomainHosts?: string[];
-  /** Arama kaynaklarında: gelen haberlerden başlığında terim geçen ve güncel olan (saklanan) */
-  matched?: number;
   error?: string;
 }
 
@@ -351,30 +349,46 @@ export const topicItems = pgTable(
 );
 
 /**
- * Google Haberler aramasında bir trend terimi için bulunan haberler (terim ↔ haber).
- * Gündem üretimi bu bağlantılarla aramayı açıklar; haberin kendisi source_items'tadır.
+ * Ortak haberler: aynı olayı en az 3 farklı haber sitesinin yayımladığı haber kümeleri.
+ * Kimlik taramalar arasında korunur; böylece "son güncellemeden sonra N sitede daha" izlenebilir.
+ * Haberin kendisi source_items'tadır (yalnızca başlık ve bağlantı).
  */
-export const trendNewsLinks = pgTable(
-  "trend_news_links",
+export const newsStories = pgTable(
+  "news_stories",
   {
-    trendKey: varchar("trend_key", { length: 200 }).notNull(),
-    sourceItemId: bigint("source_item_id", { mode: "number" })
-      .notNull()
-      .references(() => sourceItems.id, { onDelete: "cascade" }),
-    foundAt: timestamptz("found_at").notNull(),
+    id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    title: varchar("title", { length: 300 }).notNull(),
+    /** Haberi yayımlayan farklı site sayısı (pencere içinde ulaşılan en yüksek değer) */
+    publisherCount: smallint("publisher_count").notNull(),
+    /** Kümedeki ilk haberin yayın zamanı */
+    firstItemAt: timestamptz("first_item_at").notNull(),
+    /** Listeye girdiği an (3 siteye ulaştığı tarama) */
+    listedAt: timestamptz("listed_at").notNull(),
+    /** Son büyüme: hangi taramada kaç site daha eklendi (hiç büyümediyse null) */
+    lastGrowthAt: timestamptz("last_growth_at"),
+    lastGrowthBy: smallint("last_growth_by"),
+    updatedAt: timestamptz("updated_at").notNull(),
   },
   (t) => [
-    primaryKey({ columns: [t.trendKey, t.sourceItemId] }),
-    index("trend_news_links_found_idx").on(t.foundAt.desc()),
+    index("news_stories_first_item_idx").on(t.firstItemAt.desc()),
+    check("news_stories_publisher_count_positive", sql`${t.publisherCount} > 0`),
   ],
 );
 
-/** Her trend terimi en son ne zaman arandı (aynı terim sık sık aranmasın) */
-export const trendNewsSearches = pgTable("trend_news_searches", {
-  trendKey: varchar("trend_key", { length: 200 }).primaryKey(),
-  searchedAt: timestamptz("searched_at").notNull(),
-  resultCount: integer("result_count").notNull().default(0),
-});
+export const newsStoryItems = pgTable(
+  "news_story_items",
+  {
+    /** Bir haber yalnızca bir ortak habere bağlıdır */
+    sourceItemId: bigint("source_item_id", { mode: "number" })
+      .primaryKey()
+      .references(() => sourceItems.id, { onDelete: "cascade" }),
+    storyId: bigint("story_id", { mode: "number" })
+      .notNull()
+      .references(() => newsStories.id, { onDelete: "cascade" }),
+    addedAt: timestamptz("added_at").notNull(),
+  },
+  (t) => [index("news_story_items_story_idx").on(t.storyId)],
+);
 
 /** Gündem zaman çizelgesi. Yalnızca gerçek veriden (veya işaretli seed'den) üretilir. */
 export const timelineEvents = pgTable(

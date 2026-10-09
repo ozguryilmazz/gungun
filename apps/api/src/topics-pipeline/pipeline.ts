@@ -30,6 +30,7 @@ import type postgres from "postgres";
 import { urlHash } from "../ingest/normalize.ts";
 import type { Logger } from "../ingest/types.ts";
 import { inferCategory } from "./category.ts";
+import { buildStories } from "./stories.ts";
 import { FILTER_REASON_LABELS, classifyTerm } from "./term-filter.ts";
 import {
   clusterItems,
@@ -110,6 +111,9 @@ export interface PipelineResult {
   archived: number;
   /** Gündem başlığı olamayacağı için elenen arama sayısı */
   filtered: number;
+  /** Ortak haberler: listeye yeni giren ve yeni sitelerde yayımlanan */
+  storiesCreated: number;
+  storiesGrown: number;
 }
 
 export interface PipelineDeps {
@@ -512,6 +516,8 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
     cooling: 0,
     archived: 0,
     filtered: 0,
+    storiesCreated: 0,
+    storiesGrown: 0,
   };
 
   const conn = await deps.client.reserve();
@@ -579,27 +585,6 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
             and observed_at <= ${now.toISOString()}
         `)
       : [];
-    // ── Girdi 2b: Google Haberler aramasında trend terimleri için bulunan haberler (son 24 saat) ──
-    const searchRows = await db.execute<{
-      trend_key: string;
-      title: string;
-      url: string;
-      source: string | null;
-    }>(sql`
-      select l.trend_key, si.title, si.url, si.source_name as source
-      from trend_news_links l
-      join source_items si on si.id = l.source_item_id
-      where l.found_at >= ${hoursAgo(now, RULES.windowHours).toISOString()}
-        and l.found_at <= ${now.toISOString()}
-      order by coalesce(si.published_at, si.fetched_at) desc
-    `);
-    const searchNews = new Map<string, TrendInfo["related"]>();
-    for (const r of searchRows) {
-      const list = searchNews.get(r.trend_key) ?? [];
-      list.push({ title: r.title, url: r.url, source: r.source ?? "Google Haberler" });
-      searchNews.set(r.trend_key, list);
-    }
-
     // ── Girdi 3: YouTube Türkiye trend listesi (sosyal sinyal; yalnızca güncelse) ──
     const [youtubeProvider] = await db
       .select({ id: dataProviders.id, lastSuccessAt: dataProviders.lastSuccessAt })
@@ -709,10 +694,9 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
         continue;
       }
 
-      // Google'ın "ilgili haberleri" + Google Haberler aramasında bulunanlar; bazen alakasızdır:
-      // yalnızca başlığında terim geçenler kullanılır
+      // Google'ın "ilgili haberleri" bazen alakasızdır: yalnızca başlığında terim geçenler kullanılır
       const seenUrls = new Set<string>();
-      trend.related = [...trend.related, ...(searchNews.get(trend.key) ?? [])]
+      trend.related = trend.related
         .filter((r) => headlineExplainsTerm(r.title, trend.term))
         .filter((r) => !seenUrls.has(r.url) && seenUrls.add(r.url))
         .slice(0, 15);
@@ -1092,6 +1076,11 @@ export async function buildTopics(deps: PipelineDeps): Promise<PipelineResult> {
         }
       }
     }
+
+    // ══ 5) Ortak haberler (en az 3 sitede yayımlanan haberler; trend listesinden bağımsız) ══
+    const stories = await buildStories(db, items, now);
+    result.storiesCreated = stories.created;
+    result.storiesGrown = stories.grown;
 
     log.info(result, "gündem konuları güncellendi");
     return result;
