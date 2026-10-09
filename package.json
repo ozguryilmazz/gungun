@@ -31,7 +31,8 @@
     "providers": "pnpm --filter @gundemci/api providers",
     "feed:inspect": "pnpm --filter @gundemci/api feed:inspect",
     "topics:build": "pnpm --filter @gundemci/api topics:build",
-    "trends:filter": "pnpm --filter @gundemci/api trends:filter"
+    "trends:filter": "pnpm --filter @gundemci/api trends:filter",
+    "feeds:discover": "pnpm --filter @gundemci/api feeds:discover"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

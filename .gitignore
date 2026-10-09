@@ -20,3 +20,6 @@ Thumbs.db
 # Next.js
 next-env.d.ts
 *.tsbuildinfo
+
+# feeds:discover çıktısı (yerel)
+feeds-discovered.json
