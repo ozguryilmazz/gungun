@@ -39,17 +39,28 @@ const SECTION_TO_CATEGORY: Record<string, string> = {
   seyahat: "yasam",
 };
 
-/** Adresin ilk anlamlı bölüm adı → kategori (bilinmiyorsa null) */
+/** Tek konulu siteler: adreste bölüm adı yoksa sitenin kendi konusu kullanılır */
+const DOMAIN_TO_CATEGORY: Record<string, string> = {
+  "sporx.com": "spor",
+  "ntvspor.net": "spor",
+  "bloomberght.com": "ekonomi",
+};
+
+/** Adresin ilk anlamlı bölüm adı → kategori; yoksa tek konulu sitenin konusu (bilinmiyorsa null) */
 export function categoryFromUrl(url: string): string | null {
-  let path: string;
+  let parsed: URL;
   try {
-    path = new URL(url).pathname.toLowerCase();
+    parsed = new URL(url);
   } catch {
     return null;
   }
-  for (const segment of path.split("/").filter(Boolean).slice(0, 3)) {
+  for (const segment of parsed.pathname.toLowerCase().split("/").filter(Boolean).slice(0, 3)) {
     const hit = SECTION_TO_CATEGORY[segment];
     if (hit) return hit;
+  }
+  const host = parsed.hostname.toLowerCase();
+  for (const [domain, category] of Object.entries(DOMAIN_TO_CATEGORY)) {
+    if (host === domain || host.endsWith(`.${domain}`)) return category;
   }
   return null;
 }

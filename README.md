@@ -57,7 +57,7 @@ pnpm dev
 
 ## Veri toplama
 
-- **Sağlayıcılar:** `rss_news` (12 haber sitesinin RSS'i), `google_trends` (Türkiye trend RSS'i) ve
+- **Sağlayıcılar:** `rss_news` (19 haber sitesinin RSS'i), `google_trends` (Türkiye trend RSS'i) ve
   `gdelt_news` (GDELT Project haber arama API'si: trend aramaları açıklayan Türkçe haberler; robots.txt
   her çalışmada denetlenir) ve `youtube_trending` (resmi YouTube Data API v3, Türkiye trend videoları; `.env`'de `YOUTUBE_API_KEY` gerekir).
   Hepsi **kapalı** başlar.

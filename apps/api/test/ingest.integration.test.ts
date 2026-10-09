@@ -5,6 +5,7 @@ import {
   createDb,
   dataProviders,
   fetchRuns,
+  publishers,
   runMigrations,
   seedDatabase,
   sourceItems,
@@ -71,6 +72,9 @@ function fakeFetcher(
 }
 
 describe.skipIf(!URL_)("veri çekme entegrasyonu", () => {
+  /** Seed'deki gerçek (örnek olmayan) yayıncı sayısı: kaynak listesi büyüdükçe test değişmesin */
+  const publisherCount = async () =>
+    (await db.select({ n: count() }).from(publishers).where(eq(publishers.isMock, false)))[0]!.n;
   let db: Database;
   let client: postgres.Sql;
   let close: () => Promise<void>;
@@ -108,10 +112,12 @@ describe.skipIf(!URL_)("veri çekme entegrasyonu", () => {
   it("haber RSS: kısmi başarı, kaynak bazında sonuç, alan adı dışı bağlantı atlanır", async () => {
     const result = await runProvider(deps(fakeFetcher()), "rss_news", { force: true });
     expect(result.status).toBe("partial");
-    expect(result.details).toHaveLength(12);
+    const total = await publisherCount();
+    expect(result.details).toHaveLength(total);
     const failed = result.details.filter((d) => !d.ok).map((d) => d.name);
     expect(failed.sort()).toEqual(["Cumhuriyet", "Sözcü"]);
-    expect(result.itemsFetched).toBe(30);
+    // Çalışan her kaynak 3 haber (2 kaynak hata verir)
+    expect(result.itemsFetched).toBe((total - 2) * 3);
     // Teşhis bilgisi: akıştaki öğe sayısı ve alan adı dışı bağlantı
     const aa = result.details.find((d) => d.name === "Anadolu Ajansı");
     expect(aa).toEqual(
@@ -130,8 +136,8 @@ describe.skipIf(!URL_)("veri çekme entegrasyonu", () => {
 
     const [run] = await db.select().from(fetchRuns).orderBy(desc(fetchRuns.id)).limit(1);
     expect(run?.status).toBe("partial");
-    expect(run?.errorMessage).toContain("2/12");
-    expect(run?.details).toHaveLength(12);
+    expect(run?.errorMessage).toContain(`2/${total}`);
+    expect(run?.details).toHaveLength(total);
 
     // Kısmi başarı sağlayıcıyı "başarılı" sayar
     const [provider] = await db
@@ -146,7 +152,7 @@ describe.skipIf(!URL_)("veri çekme entegrasyonu", () => {
     const result = await runProvider(deps(fakeFetcher()), "rss_news", { force: true });
     expect(result.itemsFetched).toBe(0);
     const [{ n }] = (await db.select({ n: count() }).from(sourceItems)) as [{ n: number }];
-    expect(n).toBe(30);
+    expect(n).toBe(((await publisherCount()) - 2) * 3);
   });
 
   it("Google Trends: sinyaller kaydedilir; hata ardışık hata sayısını artırır", async () => {

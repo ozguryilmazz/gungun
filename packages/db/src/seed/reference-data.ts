@@ -151,4 +151,47 @@ export const PUBLISHERS: readonly PublisherSeed[] = [
     homepageUrl: "https://www.dw.com/tr",
     feedUrl: "https://rss.dw.com/rdf/rss-tur-all",
   },
+  // Kullanıcının eklediği kaynaklar (adresler feed:inspect ile doğrulanmalı)
+  {
+    name: "BirGün",
+    domain: "birgun.net",
+    homepageUrl: "https://www.birgun.net",
+    feedUrl: "https://www.birgun.net/xml/rss.xml",
+  },
+  {
+    name: "Sporx",
+    domain: "sporx.com",
+    homepageUrl: "https://www.sporx.com",
+    feedUrl: "https://www.sporx.com/rss/",
+  },
+  {
+    name: "NTV Spor",
+    domain: "ntvspor.net",
+    homepageUrl: "https://www.ntvspor.net",
+    feedUrl: "https://www.ntvspor.net/rss/gundem",
+  },
+  {
+    name: "Bloomberg HT",
+    domain: "bloomberght.com",
+    homepageUrl: "https://www.bloomberght.com",
+    feedUrl: "https://www.bloomberght.com/rss",
+  },
+  {
+    name: "T24",
+    domain: "t24.com.tr",
+    homepageUrl: "https://t24.com.tr",
+    feedUrl: "https://t24.com.tr/rss",
+  },
+  {
+    name: "Gazete Duvar",
+    domain: "gazeteduvar.com.tr",
+    homepageUrl: "https://www.gazeteduvar.com.tr",
+    feedUrl: "https://www.gazeteduvar.com.tr/rss",
+  },
+  {
+    name: "Euronews Türkçe",
+    domain: "euronews.com",
+    homepageUrl: "https://tr.euronews.com",
+    feedUrl: "https://tr.euronews.com/rss",
+  },
 ];

@@ -242,3 +242,15 @@ describe("başlık aramayı açıklıyor mu (dil ve tam eşleşme)", () => {
     expect(looksTurkish("Emekli zammi belli oldu")).toBe(true);
   });
 });
+
+describe("kategori: tek konulu siteler", () => {
+  it("adreste bölüm adı yoksa sitenin konusu; bölüm adı varsa o öncelikli", () => {
+    expect(categoryFromUrl("https://www.sporx.com/galatasaray-yeni-transfer-SXHBQ123")).toBe(
+      "spor",
+    );
+    expect(categoryFromUrl("https://www.ntvspor.net/futbol/derbi-6789")).toBe("spor");
+    expect(categoryFromUrl("https://www.bloomberght.com/faiz-karari-3001")).toBe("ekonomi");
+    expect(categoryFromUrl("https://www.bloomberght.com/dunya/abd-verisi-3002")).toBe("dunya");
+    expect(categoryFromUrl("https://t24.com.tr/haber/bir-haber,1234")).toBeNull();
+  });
+});
