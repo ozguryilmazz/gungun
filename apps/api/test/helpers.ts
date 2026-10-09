@@ -169,6 +169,10 @@ export function fakeRepo(rows: TopicRow[] = ROWS): FakeRepo {
       count("stories");
       return [];
     },
+    async getStory() {
+      count("story");
+      return null;
+    },
     async archiveDay() {
       count("archiveDay");
       return rows

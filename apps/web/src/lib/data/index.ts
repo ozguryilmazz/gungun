@@ -5,7 +5,9 @@ import {
   ArchiveDateSchema,
   ArchiveDayResponseSchema,
   ArchiveIndexResponseSchema,
+  NewsStoryDetailResponseSchema,
   NewsStoryListResponseSchema,
+  StoryIdSchema,
   StatusResponseSchema,
   TopicDetailResponseSchema,
   TopicListResponseSchema,
@@ -13,6 +15,7 @@ import {
   isValidSlug,
   type ArchiveDayResponse,
   type ArchiveIndexResponse,
+  type NewsStoryDetailResponse,
   type NewsStoryListResponse,
   type StatusResponse,
   type TopicDetailResponse,
@@ -86,4 +89,10 @@ export async function getYoutube(limit = 10): Promise<YoutubeListResponse> {
 export async function getStories(limit = 15): Promise<NewsStoryListResponse> {
   const n = Math.min(Math.max(Math.trunc(limit) || 1, 1), 15);
   return required(apiGet(`/api/v1/stories?limit=${n}`, NewsStoryListResponseSchema));
+}
+
+/** Ortak haber detayı. Geçersiz veya bilinmeyen kimlik → null (sayfa 404 gösterir) */
+export async function getStory(id: string): Promise<NewsStoryDetailResponse | null> {
+  if (!StoryIdSchema.safeParse(id).success) return null;
+  return apiGet(`/api/v1/stories/${encodeURIComponent(id)}`, NewsStoryDetailResponseSchema);
 }

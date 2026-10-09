@@ -245,6 +245,38 @@ export const NewsStoryListResponseSchema = z.object({
   meta: ResponseMetaSchema,
 });
 
+/** Ortak haber kimliği (URL'de): pozitif tam sayı */
+export const StoryIdSchema = z.string().regex(/^[1-9][0-9]{0,15}$/);
+
+const StorySiteSchema = z.object({
+  name: z.string().min(1).max(96),
+  /** O sitenin başlığı (değiştirilmeden) */
+  title: z.string().min(1).max(300),
+  url: SafeUrlSchema,
+  /** Sitenin bildirdiği yayın zamanı */
+  publishedAt: isoDate,
+  /** Haberi sitenin RSS akışında ilk gördüğümüz an */
+  fetchedAt: isoDate,
+});
+
+export const NewsStoryDetailResponseSchema = z.object({
+  story: NewsStorySchema.omit({ sources: true }),
+  /** Her site bir kez, ilk yayın zamanına göre (ilk eleman = ilk yayımlayan site) */
+  sites: z.array(StorySiteSchema).max(100),
+  /** Taramalar: listeye girdiği tarama ve sonraki güncellemelerde eklenen siteler */
+  scans: z.array(z.object({ at: isoDate, sites: z.array(z.string().max(96)).max(100) })).max(200),
+  spread: z.object({
+    minutesToThreeSites: z.number().int().min(0).nullable(),
+    sitesInFirstHour: z.number().int().min(0),
+    sitesInLastHour: z.number().int().min(0),
+    spanMinutes: z.number().int().min(0),
+  }),
+  /** Habere bağlı tüm haberler (aynı sitenin birden çok haberi olabilir) */
+  items: z.array(StorySiteSchema).max(200),
+  meta: ResponseMetaSchema,
+});
+
+export type NewsStoryDetailResponse = z.infer<typeof NewsStoryDetailResponseSchema>;
 export type NewsStory = z.infer<typeof NewsStorySchema>;
 export type NewsStoryListResponse = z.infer<typeof NewsStoryListResponseSchema>;
 export type YoutubeVideo = z.infer<typeof YoutubeVideoSchema>;

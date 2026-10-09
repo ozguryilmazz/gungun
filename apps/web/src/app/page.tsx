@@ -14,7 +14,7 @@ export default async function HomePage() {
     optional(getStatus()),
     optional(getTopicList({ kind: "news", limit: 6 })),
     optional(getYoutube(10)),
-    optional(getStories(5)),
+    optional(getStories(15)),
   ]);
   return (
     <TopicFeed

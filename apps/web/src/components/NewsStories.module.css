@@ -66,6 +66,12 @@
   font-weight: 600;
   line-height: 1.35;
   overflow-wrap: anywhere;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.name:hover {
+  text-decoration: underline;
 }
 
 .meta,

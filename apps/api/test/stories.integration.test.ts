@@ -12,14 +12,14 @@ import {
   sourceItems,
   type Database,
 } from "@gundemci/db";
-import { NewsStoryListResponseSchema } from "@gundemci/shared";
+import { NewsStoryDetailResponseSchema, NewsStoryListResponseSchema } from "@gundemci/shared";
 import { asc, eq, sql } from "drizzle-orm";
 import type postgres from "postgres";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { buildApp } from "../src/app.ts";
 import { createTopicRepository } from "../src/modules/topics/repository.ts";
 import { buildTopics } from "../src/topics-pipeline/pipeline.ts";
-import { storyGrowth } from "../src/topics-pipeline/stories.ts";
+import { describeSpread, storyGrowth } from "../src/topics-pipeline/stories.ts";
 
 const URL_ = process.env.TEST_DATABASE_URL;
 const silent = { info() {}, warn() {}, error() {} };
@@ -31,6 +31,49 @@ describe("storyGrowth", () => {
     expect(storyGrowth(3, 5)).toBe(2);
     expect(storyGrowth(4, 4)).toBeNull();
     expect(storyGrowth(5, 4)).toBeNull();
+  });
+});
+
+describe("describeSpread", () => {
+  const item = (name: string, published: number, added: number, n = 0) => ({
+    publisherName: name,
+    title: `${name} başlık ${n}`,
+    url: `https://${name.toLowerCase()}.example/${n}`,
+    publishedAt: at(published),
+    fetchedAt: at(published + 2),
+    addedAt: at(added),
+  });
+
+  it("ilk yayımlayan site, taramalar ve hız ölçüleri", () => {
+    const s = describeSpread(
+      [
+        item("B", -20, 10),
+        item("A", -30, 10),
+        item("C", 5, 10),
+        item("A", 15, 30, 1), // aynı site ikinci kez: yeni site sayılmaz
+        item("D", 22, 30),
+        item("E", 50, 60),
+      ],
+      at(60),
+    );
+    expect(s.sites.map((x) => x.name)).toEqual(["A", "B", "C", "D", "E"]);
+    expect(s.sites[0]!.url).toBe("https://a.example/0");
+    expect(s.scans.map((x) => [x.at.toISOString(), x.sites])).toEqual([
+      [at(10).toISOString(), ["A", "B", "C"]],
+      [at(30).toISOString(), ["D"]],
+      [at(60).toISOString(), ["E"]],
+    ]);
+    expect(s.minutesToThreeSites).toBe(35);
+    expect(s.sitesInFirstHour).toBe(4); // A, B, C, D (E: 80 dk sonra)
+    expect(s.sitesInLastHour).toBe(3); // C, D, E
+    expect(s.spanMinutes).toBe(80);
+  });
+
+  it("boş liste", () => {
+    const s = describeSpread([], at(0));
+    expect(s.sites).toEqual([]);
+    expect(s.minutesToThreeSites).toBeNull();
+    expect(s.spanMinutes).toBe(0);
   });
 });
 
@@ -181,6 +224,23 @@ describe.skipIf(!URL_)("ortak haberler", () => {
         (await app.inject({ method: "GET", url: "/api/v1/stories?limit=1" })).json(),
       );
       expect(one.items).toHaveLength(1);
+
+      // Detay: ilk yayımlayan site, taramalar, tüm haberler
+      const detailRes = await app.inject({ method: "GET", url: `/api/v1/stories/${first!.id}` });
+      expect(detailRes.statusCode).toBe(200);
+      const detail = NewsStoryDetailResponseSchema.parse(detailRes.json());
+      expect(detail.story.publisherCount).toBe(5);
+      expect(detail.sites).toHaveLength(5);
+      expect(detail.sites[0]!.publishedAt).toBe(at(-30).toISOString());
+      expect(detail.items).toHaveLength(6); // aynı siteden iki haber
+      expect(detail.scans.map((x) => x.sites.length)).toEqual([3, 2]);
+      expect(detail.scans[0]!.at).toBe(at(10).toISOString());
+      expect(detail.spread.minutesToThreeSites).toBe(35);
+
+      for (const bad of ["0", "abc", "1;drop", "99999999", "12345678901234567890"]) {
+        const r = await app.inject({ method: "GET", url: `/api/v1/stories/${bad}` });
+        expect(r.statusCode, bad).toBe(404);
+      }
     } finally {
       await app.close();
     }

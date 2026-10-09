@@ -198,6 +198,12 @@ Kural tabanlı (`apps/api/src/topics-pipeline/term-filter.ts`), yapay zekâ yok:
 - **Sıralama:** Yayımlayan site sayısına göre (çoktan aza); eşitlikte son değişimi daha yeni olan üstte. En fazla 15 haber. İlk haberi 24 saatten eski olan listeden çıkar.
 - **Gösterilen:** Başlık (yayımlayan sitelerden birinin başlığı, sakinleştirilmiş), site sayısı, ilk haberin zamanı, büyüme notu ve her sitenin orijinal haberine bağlantı. Haber metni alınmaz.
 - **Veritabanı:** `news_stories`, `news_story_items` (bir haber yalnızca bir ortak habere bağlanır), migration `0005_stories`.
-- **API:** `GET /api/v1/stories?limit=` (1–15, varsayılan 15).
-- **Arayüz:** `/ortak-haberler` sayfası (15 haber ve kaynakları) ve menüde “Ortak haberler”. Ana sayfada ilk 5 haber.
+- **API:** `GET /api/v1/stories?limit=` (1–15, varsayılan 15) ve `GET /api/v1/stories/:id` (detay).
+- **Arayüz:** Ana sayfada trend listesiyle **yan yana** (sağ sütunun üstünde, 15 haber; dar ekranda alt alta). `/ortak-haberler` sayfası (15 haber ve kaynakları), menüde “Ortak haberler”.
+- **Detay sayfası (`/ortak-haberler/[id]`):** başlığa tıklayınca açılır.
+  - **İlk yayımlayan site:** sitenin bildirdiği yayın saatine göre en erken haber. Bizim RSS’te ilk gördüğümüz an da yazılır.
+  - **Taramalara göre yayılma:** haberin listeye girdiği tarama (hangi sitelerle) ve sonraki her güncellemede eklenen siteler.
+  - **Yayılma hızı:** 3 siteye ulaşma süresi, ilk 1 saatte ve son 1 saatte yayımlayan site sayısı, ilk siteden son siteye geçen süre. Bunlara ek olarak zamana göre toplam site sayısı grafiği (basamaklı çizgi; noktanın üzerine gelince saat ve site).
+  - **Haber kaynakları:** habere bağlı tüm haberler (aynı sitenin birden çok haberi dahil), sitenin kendi başlığı ve orijinal habere bağlantı.
+  - Bütün değerler ölçülen veridir; tahmin ya da özet yoktur.
 - **Mevcut “Haberlerde öne çıkanlar” ile fark:** O bölüm yalnızca trend aramasıyla eşleşmeyen ve en az 4 kaynakta geçen haber konularını gösterir. Ortak haberler listesi trend olsun olmasın tüm ortak haberleri kapsar.

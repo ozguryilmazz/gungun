@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import type { Database } from "@gundemci/db";
 import type { ScoreComponents } from "@gundemci/shared";
 import { headlineExplainsTerm } from "../../topics-pipeline/pipeline.ts";
+import type { StoryItem } from "../../topics-pipeline/stories.ts";
 
 export interface SnapshotRef {
   capturedAt: Date;
@@ -103,6 +104,8 @@ export interface TopicRepository {
   latestYoutube(since: Date, limit: number): Promise<YoutubeRow[]>;
   /** İlk haberi `since` sonrasında olan ortak haberler: site sayısına göre, en fazla `limit` */
   listStories(since: Date, limit: number): Promise<StoryRow[]>;
+  /** Tek ortak haber ve ona bağlı tüm haberler (en fazla 200); yoksa null */
+  getStory(id: number): Promise<{ story: Omit<StoryRow, "sources">; items: StoryItem[] } | null>;
   ping(): Promise<void>;
 }
 
@@ -518,6 +521,59 @@ export function createTopicRepository(db: Database): TopicRepository {
           .sort((a, b) => a.publishedAt.getTime() - b.publishedAt.getTime())
           .slice(0, 50),
       }));
+    },
+
+    async getStory(id) {
+      const [s] = await db.execute<{
+        id: number | string;
+        title: string;
+        publisher_count: number;
+        first_item_at: Date | string;
+        listed_at: Date | string;
+        last_growth_at: Date | string | null;
+        last_growth_by: number | null;
+      }>(sql`
+        select id, title, publisher_count, first_item_at, listed_at, last_growth_at, last_growth_by
+        from news_stories where id = ${id}
+      `);
+      if (!s) return null;
+      const items = await db.execute<{
+        publisher_name: string;
+        title: string;
+        url: string;
+        published_at: Date | string;
+        fetched_at: Date | string;
+        added_at: Date | string;
+      }>(sql`
+        select p.name as publisher_name, si.title, si.url,
+               coalesce(si.published_at, si.fetched_at) as published_at,
+               si.fetched_at, nsi.added_at
+        from news_story_items nsi
+        join source_items si on si.id = nsi.source_item_id
+        join publishers p on p.id = si.publisher_id
+        where nsi.story_id = ${id} and si.is_mock = false
+        order by coalesce(si.published_at, si.fetched_at) asc, si.id asc
+        limit 200
+      `);
+      return {
+        story: {
+          id: Number(s.id),
+          title: s.title,
+          publisherCount: Number(s.publisher_count),
+          firstItemAt: asDate(s.first_item_at),
+          listedAt: asDate(s.listed_at),
+          lastGrowthAt: s.last_growth_at === null ? null : asDate(s.last_growth_at),
+          lastGrowthBy: s.last_growth_by === null ? null : Number(s.last_growth_by),
+        },
+        items: items.map((i) => ({
+          publisherName: i.publisher_name,
+          title: i.title,
+          url: i.url,
+          publishedAt: asDate(i.published_at),
+          fetchedAt: asDate(i.fetched_at),
+          addedAt: asDate(i.added_at),
+        })),
+      };
     },
 
     async ping() {

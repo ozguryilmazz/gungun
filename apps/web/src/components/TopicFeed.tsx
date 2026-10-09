@@ -56,7 +56,10 @@ export function TopicFeed({
     <>
       <MockBanner show={isMock} />
       <div className={`container ${styles.layout}`}>
-        <main id="icerik" className={styles.main}>
+        <main
+          id="icerik"
+          className={`${styles.main} ${stories !== undefined ? styles.mainNarrow : ""}`}
+        >
           <div className={styles.intro}>
             <h1 className={styles.heading}>{heading}</h1>
             <p className={styles.sub}>
@@ -90,14 +93,17 @@ export function TopicFeed({
             </ol>
           )}
 
-          {stories !== undefined ? <NewsStories data={stories} compact /> : null}
-
           {youtube !== undefined ? <YoutubeTrends data={youtube} compact /> : null}
 
           <NewsHighlights list={news} />
         </main>
 
-        <aside className={styles.aside} aria-label="Gündem hareketleri">
+        <aside
+          className={`${styles.aside} ${stories !== undefined ? styles.asideWide : ""}`}
+          aria-label="Ortak haberler ve gündem hareketleri"
+        >
+          {/* İkinci listeleme yöntemi: trend listesinin yanında, çok sitede yayımlanan haberler */}
+          {stories !== undefined ? <NewsStories data={stories} compact /> : null}
           <div id="yukselenler" className={styles.anchor}>
             <MovementList
               id="rising-title"

@@ -129,3 +129,92 @@ export async function buildStories(
   }
   return result;
 }
+
+/** Ortak habere bağlı tek bir haber (detay sayfası için) */
+export interface StoryItem {
+  publisherName: string;
+  title: string;
+  url: string;
+  /** Sitenin bildirdiği yayın zamanı (yoksa bizim çektiğimiz an) */
+  publishedAt: Date;
+  /** Haberi RSS'te ilk gördüğümüz an */
+  fetchedAt: Date;
+  /** Haberin ortak habere bağlandığı tarama */
+  addedAt: Date;
+}
+
+export interface StorySite {
+  name: string;
+  title: string;
+  url: string;
+  publishedAt: Date;
+  fetchedAt: Date;
+  addedAt: Date;
+}
+
+export interface StorySpread {
+  /** Sitelere ilk yayın zamanına göre (her site bir kez) */
+  sites: StorySite[];
+  /** Taramalar: hangi taramada hangi siteler eklendi (ilk kayıt = listeye girdiği tarama) */
+  scans: { at: Date; sites: string[] }[];
+  /** İlk yayından 3. sitenin yayınına kadar geçen dakika */
+  minutesToThreeSites: number | null;
+  /** İlk yayından sonraki 1 saatte yayımlayan site sayısı (ilk site dahil) */
+  sitesInFirstHour: number;
+  /** Son 1 saatte yayımlayan yeni site sayısı */
+  sitesInLastHour: number;
+  /** İlk ve son sitenin yayını arasındaki dakika */
+  spanMinutes: number;
+}
+
+const minutesBetween = (a: Date, b: Date) => Math.round((b.getTime() - a.getTime()) / 60_000);
+
+/** Bir ortak haberin yayılması: ölçülen veriden (uydurma yok) */
+export function describeSpread(items: StoryItem[], now: Date): StorySpread {
+  const sorted = [...items].sort(
+    (a, b) => a.publishedAt.getTime() - b.publishedAt.getTime() || a.url.localeCompare(b.url),
+  );
+  const sites: StorySite[] = [];
+  const seen = new Set<string>();
+  for (const i of sorted) {
+    if (seen.has(i.publisherName)) continue;
+    seen.add(i.publisherName);
+    sites.push({
+      name: i.publisherName,
+      title: i.title,
+      url: i.url,
+      publishedAt: i.publishedAt,
+      fetchedAt: i.fetchedAt,
+      addedAt: i.addedAt,
+    });
+  }
+
+  // Her site, kendi ilk haberinin bağlandığı taramada sayılır
+  const byScan = new Map<number, string[]>();
+  for (const s of sites) {
+    const firstAdded = items
+      .filter((i) => i.publisherName === s.name)
+      .reduce((min, i) => (i.addedAt < min ? i.addedAt : min), s.addedAt);
+    const key = firstAdded.getTime();
+    byScan.set(key, [...(byScan.get(key) ?? []), s.name]);
+  }
+  const scans = [...byScan.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([at, names]) => ({ at: new Date(at), sites: names }));
+
+  const first = sites[0];
+  const last = sites[sites.length - 1];
+  return {
+    sites,
+    scans,
+    minutesToThreeSites:
+      first && sites[2] ? minutesBetween(first.publishedAt, sites[2].publishedAt) : null,
+    sitesInFirstHour: first
+      ? sites.filter((s) => s.publishedAt.getTime() - first.publishedAt.getTime() <= 3_600_000)
+          .length
+      : 0,
+    sitesInLastHour: sites.filter((s) => now.getTime() - s.publishedAt.getTime() <= 3_600_000)
+      .length,
+    spanMinutes: first && last ? minutesBetween(first.publishedAt, last.publishedAt) : 0,
+  };
+}

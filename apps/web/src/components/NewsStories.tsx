@@ -6,7 +6,7 @@ import styles from "./NewsStories.module.css";
 interface Props {
   /** null: veri şu anda alınamıyor */
   data: NewsStoryListResponse | null;
-  /** true: ana sayfa bölümü (ilk birkaç haber + tüm listeye bağlantı) */
+  /** true: ana sayfa bölümü (kaynak bağlantıları gösterilmez; ayrıntı başlığa tıklayınca) */
   compact?: boolean;
   headingLevel?: "h1" | "h2";
 }
@@ -43,7 +43,9 @@ export function NewsStories({ data, compact = false, headingLevel = "h2" }: Prop
                 {i + 1}
               </span>
               <div className={styles.body}>
-                <p className={styles.name}>{s.title}</p>
+                <Link href={`/ortak-haberler/${s.id}`} className={styles.name}>
+                  {s.title}
+                </Link>
                 <p className={styles.meta}>
                   <strong>{s.publisherCount} haber sitesinde</strong> · ilk haber{" "}
                   {formatRelative(s.firstItemAt, now)}
@@ -75,7 +77,7 @@ export function NewsStories({ data, compact = false, headingLevel = "h2" }: Prop
       )}
       {compact && data && data.items.length > 0 ? (
         <Link href="/ortak-haberler" className={styles.more}>
-          Tüm listeyi ve kaynakları gör →
+          Kaynaklarıyla birlikte tüm liste →
         </Link>
       ) : null}
     </section>

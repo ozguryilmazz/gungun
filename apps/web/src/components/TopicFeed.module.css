@@ -23,6 +23,15 @@
   gap: 16px;
 }
 
+/* Ana sayfa: trend listesi ve ortak haberler yan yana (yaklaşık 3'e 2) */
+.mainNarrow {
+  flex: 3 1 560px;
+}
+
+.asideWide {
+  flex: 2 1 380px;
+}
+
 .anchor {
   scroll-margin-top: 16px;
 }
